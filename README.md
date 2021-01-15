@@ -20,3 +20,7 @@ pip3 install pydriller Pygments Jinja2
 ```bash
 main.py -i <repo> -o <outputfile>
 ```
+
+repo is the local repository folder
+
+outputfile is the full file path to a file to save the html into.
