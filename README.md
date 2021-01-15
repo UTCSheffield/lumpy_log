@@ -11,12 +11,12 @@ This isn't great but it does the job (a bit).
 
 ## Installation
 
-'''bash
+```bash
 pip3 install pydriller Pygments Jinja2
-'''
+```
 
 ## Usage
 
-'''bash
+```bash
 main.py -i <repo> -o <outputfile>
-'''
+```
