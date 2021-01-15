@@ -23,7 +23,7 @@ def main(argv):
     
     for opt, arg in opts:
         if opt == '-h':
-            print ('test.py -i <repo> -o <outputfile>')
+            print ('main.py -i <repo> -o <outputfile>')
             sys.exit()
         elif opt in ("-i", "--irepo"):
             repo = arg
