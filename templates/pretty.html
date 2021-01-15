@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block body %}
+    {% for commit in commits %}
+    <div>
+        <h2>Commit by {{ commit.author }} at {{ commit.date }}</h2>
+        <p>{{ commit.msg }}</p>
+
+        <div>
+            {% for mod in commit.modifications %}
+            <div>
+            <h3>{{ mod.change_type }} : {{ mod.filename }}</h3>
+            {{ mod.hlcode }}
+            </div>
+            {% endfor %}                
+        </div>
+    </div>
+    {% endfor %}
+{% endblock %}
