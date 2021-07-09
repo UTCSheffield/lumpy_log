@@ -9,7 +9,12 @@
             {% for mod in commit.modifications %}
             <div>
             <h3>{{ mod.change_type }} : {{ mod.filename }}</h3>
-            {{ mod.hlcode }}
+            {% for img in mod.images %}
+                <img src="{{img}}" \>
+            {% else %}
+                {{ mod.hlcode }}
+            {% endfor %}
+
             </div>
             {% endfor %}                
         </div>
