@@ -2,22 +2,49 @@
 
 ## pip3 install pydriller Pygments pybars4
 
+import yaml
+LANGUAGES_PATH = "languages.yml"
 
-# Get a compiler
+def morphLang(aLang):
+    oLang = aLang[1]
+    oLang['lang'] = aLang[0]
+    return oLang
+
+with open(LANGUAGES_PATH, 'r') as file:
+    LANGUAGES = [morphLang(Lang) for Lang in yaml.safe_load(file).items()]
+    
+def getFileLanguage(ext):
+    primary = [val for val in LANGUAGES if val['primary_extension'] == ext] 
+    
+    if (len(primary)):
+        if 'ace_mode' in primary[0]:
+            return primary[0]['ace_mode']
+        return primary[0]['lang'].lower()
+        
+    secondary = [val for val in LANGUAGES if 'extensions' in val and val['extensions'] == ext] 
+    
+    if (len(secondary)):
+        if 'ace_mode' in secondary[0]:
+            return secondary[0]['ace_mode']
+        return secondary[0]['lang'].lower()
+        
+    return ext[1:]
+
+
+'''
+# Get a compilerWS
 from pybars import Compiler #http://handlebarsjs.com documentation
 compiler = Compiler()
 
 # Compile the template
 source = u"{{>header}}{{#list people}}{{firstName}} {{lastName}}{{/list}}"
 template = compiler.compile(source)
+'''
+
 from genericpath import exists
 from re import split
 import sys, os
 from pydriller import Repository
-
-from guesslang import Guess
-guess = Guess()
-
 
 def main(args):
     kwargs = {}
@@ -63,26 +90,15 @@ def main(args):
                 if hasattr(commit, "modified_files"):
                     for m in commit.modified_files:
                         filename, file_extension = os.path.splitext(m.filename)
-                        language = file_extension.replace("","")
-                        if language == "js":
-                            "javascript"
-                        if language == "py":
-                            "python"
+                        language = getFileLanguage(file_extension)
+
                         newmod = {
                             "filename":m.filename,
                             "change_type":m.change_type.name,
                             "code" : [],
-                            "language": language,#"",#guess.language_name(m.source_code),
-                            #"source_code":m.source_code
-                            #"hlcode": "",
-                            #"images": []
+                            "language": language
                         }
                                             
-                        #if(m.source_code):
-                        #    newmod["language"]= guess.language_name(m.source_code)
-
-                        #print(m.change_type.name, " '{}'".format(m.filename))
-                        
                         if m.filename.lower().endswith(('.png', '.jpg', '.jpeg', 'gif')) == False:                    
                             if m.change_type.name == "ADD":
                                 newmod["code"].append(m.source_code)
@@ -111,13 +127,7 @@ def main(args):
                 with open( genfilepath, "w") as file1:
                     # Writing data to a file
                     file1.write("\n\n".join(newcommit["markdown"]))
-            
-            
-    #outputfile = os.path.join(args['outputfolder'], "index.html")
-    #of = open(outputfile, "w")
     
-    
-
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(prog='Prettify GitHub Log', description='Make git logs easier for use in scenerioas when communicating the progress of a project to none experts.')
@@ -126,13 +136,10 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--fromcommit", dest="from_commit")
     parser.add_argument("-t", "--tocommit", dest="to_commit")
     parser.add_argument("-a", "--allbranches", action="store_true")
-    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_false")
     parser.add_argument("-b", "--branch", dest="branch")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     
     main(vars(args))
-   
-   
-
-
+    
