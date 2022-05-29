@@ -42,7 +42,7 @@ def main(args):
                 "msg":commit.msg,
                 "author":commit.author.name,
                 "date":commit.author_date.strftime("%Y-%m-%d"),
-                "name":commit.author_date.strftime("%Y-%m-%d")+" "+commit.hash[:6],
+                "name":commit.author_date.strftime("%Y%m%d %H%M")+" "+commit.hash[:4],
                 "author_date":commit.author_date,
                 "modifications":[],
                 "markdown" : [
