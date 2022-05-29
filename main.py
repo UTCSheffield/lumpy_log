@@ -22,7 +22,7 @@ guess = Guess()
 def main(args):
     kwargs = {}
     for param in args.keys():
-        if not param in ["outputfolder", "repo", "HCTI_API_USER_ID", "HCTI_API_KEY"]:
+        if not param in ["outputfolder", "allbranches", "branch", "repo", "HCTI_API_USER_ID", "HCTI_API_KEY"]:
             if args[param]:
                 kwargs[param] = args[param]
 
@@ -32,7 +32,10 @@ def main(args):
     commits = []
 
     for commit in Repository(args['repo'], **kwargs).traverse_commits():
-        if(args["allbranches"] or commit.in_main_branch):
+        if(args["allbranches"] or (
+            (args["branch"] is None and commit.in_main_branch)
+            or (args["branch"] in commit.branches) 
+        )):
             print(commit.author.name, commit.msg)
             newcommit = {
                 "hash":commit.hash,
@@ -118,6 +121,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--fromcommit", dest="from_commit")
     parser.add_argument("-t", "--tocommit", dest="to_commit")
     parser.add_argument("-a", "--allbranches", action="store_true")
+    parser.add_argument("-b", "--branch", dest="branch")
     args = parser.parse_args()
     
     main(vars(args))
