@@ -1,8 +1,14 @@
 #!/usr/bin/python3
 
+import yaml
+from pybars import Compiler # http://handlebarsjs.com documentation
+from genericpath import exists
+from re import split
+import sys, os
+from pydriller import Repository
+
 ## pip3 install pydriller Pygments pybars4
 
-import yaml
 LANGUAGES_PATH = "languages.yml"
 
 def morphLang(aLang):
@@ -31,20 +37,27 @@ def getFileLanguage(ext):
     return ext[1:]
 
 
-'''
-# Get a compilerWS
-from pybars import Compiler #http://handlebarsjs.com documentation
+with open(os.path.join("templates","commit.hbs")) as f:
+    sCommit = f.read()
+
+with open(os.path.join("templates","modified_files.hbs")) as f:
+    sModifiedFiles = f.read()
+
 compiler = Compiler()
 
 # Compile the template
-source = u"{{>header}}{{#list people}}{{firstName}} {{lastName}}{{/list}}"
-template = compiler.compile(source)
-'''
+tCommit = compiler.compile(sCommit)
+tModifiedFiles = compiler.compile(sModifiedFiles)
 
-from genericpath import exists
-from re import split
-import sys, os
-from pydriller import Repository
+
+change_verbs_past = {
+    "ADD" : "Added",
+    "COPY" : "Copied",
+    "RENAME" : "Renamed",
+    "DELETE" : "Removed",
+    "MODIFY" : "Modified",
+    "UNKNOWN" : "Unknown"
+}
 
 def main(args):
     kwargs = {}
@@ -80,21 +93,20 @@ def main(args):
                     "name": genfilename,
                     "author_date":commit.author_date,
                     "modifications":[],
-                    "markdown" : [
-                        "## Commit by "+ commit.author.name+" at "+ str(commit.author_date),
-                        commit.hash,
-                        commit.msg
-                    ]
                 }
-
+                newcommit["markdown"] = tCommit(newcommit)
+                        
                 if hasattr(commit, "modified_files"):
                     for m in commit.modified_files:
                         filename, file_extension = os.path.splitext(m.filename)
                         language = getFileLanguage(file_extension)
-
+                        change_verb = m.change_type.name[0]+m.change_type.name[1:].lower()
+                        
                         newmod = {
                             "filename":m.filename,
                             "change_type":m.change_type.name,
+                            "change_verb": change_verb,
+                            "change_verb_past": change_verbs_past[m.change_type.name],
                             "code" : [],
                             "language": language
                         }
@@ -110,24 +122,25 @@ def main(args):
                                     lines = str.splitlines(m.source_code)
                                         
                                     for c in m.changed_methods:
-                                        newfunc = "\n".join(lines[c.__dict__['start_line']-1: c.__dict__['start_line']+ c.__dict__['nloc']+1])
-                                        #print("newfunc", newfunc)
-                                        newmod["code"].append(newfunc)
+                                        newfunc = c.__dict__
+                                        newfunccode = "\n".join(lines[newfunc['start_line']-1: newfunc['end_line']])
+                                        #print("newfunccode", newfunccode)
+                                        newmod["code"].append(newfunccode)
                                 else:
                                     newmod["code"].append(m.source_code)
-                        
-                            newcommit["markdown"].append("### "+newmod["change_type"]+" : "+ newmod["filename"])
-                            newcommit["markdown"].append("```"+newmod["language"])
-                            newcommit["markdown"].append("\n".join(newmod["code"]))
-                            newcommit["markdown"].append("```")
+
+                            newcommit["markdown"] += "\n\n" + tModifiedFiles(newmod)
+                            
                         newcommit["modifications"].append(newmod)
                 
                 commits.append(newcommit)
                 
                 with open( genfilepath, "w") as file1:
                     # Writing data to a file
-                    file1.write("\n\n".join(newcommit["markdown"]))
+                    #file1.write("\n\n".join(newcommit["markdown"]))
+                    file1.write(newcommit["markdown"])
     
+                    
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(prog='Prettify GitHub Log', description='Make git logs easier for use in scenerioas when communicating the progress of a project to none experts.')
