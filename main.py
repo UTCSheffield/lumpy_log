@@ -27,13 +27,13 @@ def getFileLanguage(ext):
             return primary[0]['ace_mode']
         return primary[0]['lang'].lower()
         
-    secondary = [val for val in LANGUAGES if 'extensions' in val and val['extensions'] == ext] 
+    secondary = [val for val in LANGUAGES if 'extensions' in val and ext in val['extensions']] 
     
     if (len(secondary)):
         if 'ace_mode' in secondary[0]:
             return secondary[0]['ace_mode']
         return secondary[0]['lang'].lower()
-        
+    
     return ext[1:]
 
 
