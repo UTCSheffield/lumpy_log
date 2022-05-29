@@ -1,3 +1,6 @@
+//Does this work?
+
+
 /**
  * A quite wonderful function.
  * @param {object} - Privacy gown
@@ -6,6 +9,6 @@
  */
  function protection (cloak, dagger) {
 
-    return true
+    return "What?"
 
  }
