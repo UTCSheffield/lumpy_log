@@ -6,6 +6,6 @@
  */
  function protection (cloak, dagger) {
 
-    return false
+    return true
 
  }
