@@ -59,10 +59,38 @@ change_verbs_past = {
     "UNKNOWN" : "Unknown"
 }
 
+def lineIsComment(lang, line, multiline = False):
+    '''Needs to be a recursive thing that works backwards and returns a number'''
+    if (multiline):
+        if (lang in ["python"]):
+            return not((line.strip()[:3] == "'''") or (line.strip()[:3] == '"""'))
+        if (lang in ["c", "javascript"]):
+            return (line.strip()[:2] in ["/*"])
+        return False
+        
+    if (lang in ["python"]):
+        return line.strip()[0] == "#"
+    if (lang in ["c", "javascript"]):
+        return (line.strip()[-2:] == "*/") or (line.strip()[:2] in ["//", "/*"])
+    return False
+    
+def getFunctionCode(lines, lang, newfunc):                                    
+    '''Takes in the code, language and function start and end line
+    returns the lines of the function including comments
+    '''
+    startline = newfunc['start_line']-1
+    
+    if (lineIsComment(lang, lines[startline-1])):
+        #print("lines[startline-1]", lines[startline-1])
+        pass
+    
+    return "\n".join(lines[startline: newfunc['end_line']])
+    
+
 def main(args):
     kwargs = {}
     for param in args.keys():
-        if not param in ["outputfolder", "force","verbose", "allbranches", "branch", "repo", "HCTI_API_USER_ID", "HCTI_API_KEY"]:
+        if not param in ["dryrun","outputfolder", "force","verbose", "allbranches", "branch", "repo", "HCTI_API_USER_ID", "HCTI_API_KEY"]:
             if args[param]:
                 kwargs[param] = args[param]
 
@@ -123,7 +151,8 @@ def main(args):
                                         
                                     for c in m.changed_methods:
                                         newfunc = c.__dict__
-                                        newfunccode = "\n".join(lines[newfunc['start_line']-1: newfunc['end_line']])
+                                        newfunccode = getFunctionCode(lines, language, newfunc)
+                                        #newfunccode = "\n".join(lines[newfunc['start_line']-1: newfunc['end_line']])
                                         #print("newfunccode", newfunccode)
                                         newmod["code"].append(newfunccode)
                                 else:
@@ -135,10 +164,11 @@ def main(args):
                 
                 commits.append(newcommit)
                 
-                with open( genfilepath, "w") as file1:
-                    # Writing data to a file
-                    #file1.write("\n\n".join(newcommit["markdown"]))
-                    file1.write(newcommit["markdown"])
+                if(not args["dryrun"]):
+                    with open( genfilepath, "w") as file1:
+                        # Writing data to a file
+                        #file1.write("\n\n".join(newcommit["markdown"]))
+                        file1.write(newcommit["markdown"])
     
                     
 if __name__ == "__main__":
@@ -152,6 +182,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", action="store_false")
     parser.add_argument("-b", "--branch", dest="branch")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("-d", "--dryrun", action="store_true")
     args = parser.parse_args()
     
     main(vars(args))
