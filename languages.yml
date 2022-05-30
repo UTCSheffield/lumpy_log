@@ -187,6 +187,7 @@ Bro:
 
 C:
   type: programming
+  comment_type: c
   color: "#555"
   primary_extension: .c
   extensions:
@@ -194,6 +195,7 @@ C:
 
 C#:
   type: programming
+  comment_type: c
   ace_mode: csharp
   search_term: csharp
   color: "#5a25a2"
@@ -205,6 +207,7 @@ C#:
 
 C++:
   type: programming
+  comment_type: c
   ace_mode: c_cpp
   search_term: cpp
   color: "#f34b7d"
@@ -296,6 +299,7 @@ Clojure:
 
 CoffeeScript:
   type: programming
+  comment: C
   ace_mode: coffee
   color: "#244776"
   aliases:
@@ -757,6 +761,7 @@ Jade:
 
 Java:
   type: programming
+  comment: C
   ace_mode: java
   color: "#b07219"
   primary_extension: .java
@@ -771,6 +776,7 @@ Java Server Pages:
 
 JavaScript:
   type: programming
+  comment: C
   ace_mode: javascript
   color: "#f15501"
   aliases:
@@ -847,6 +853,7 @@ Literate Agda:
 Literate CoffeeScript:
   type: programming
   group: CoffeeScript
+  comment: C
   lexer: Text only
   ace_mode: markdown
   wrap: true
@@ -1046,6 +1053,7 @@ ObjDump:
 
 Objective-C:
   type: programming
+  comment: C
   color: "#438eff"
   aliases:
   - obj-c
@@ -1183,6 +1191,7 @@ PowerShell:
 Processing:
   type: programming
   lexer: Java
+  comment: C
   color: "#2779ab"
   primary_extension: .pde
 

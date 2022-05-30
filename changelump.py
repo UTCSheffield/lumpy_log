@@ -45,6 +45,9 @@ class ChangeLump(object):
         #print("code", code)
         return code
     
+    # languages.yml now contains a comment field 
+    # i.e. comment : C 
+    # https://geekflare.com/how-to-add-comments/
     def lineIsComment(self, i):
         firstLine = (i == self.start - 1 )
         line = self.lines[i].strip()
