@@ -1,13 +1,13 @@
 #!/usr/bin/python3
-
 import yaml
 from pybars import Compiler # http://handlebarsjs.com documentation
 from genericpath import exists
 from re import split
 import sys, os
 from pydriller import Repository
+from changelump import ChangeLump
 
-## pip3 install pydriller Pygments pybars4
+## pip3 install pydriller pybars4
 
 LANGUAGES_PATH = "languages.yml"
 
@@ -58,34 +58,6 @@ change_verbs_past = {
     "MODIFY" : "Modified",
     "UNKNOWN" : "Unknown"
 }
-
-def lineIsComment(lang, line, multiline = False):
-    '''Needs to be a recursive thing that works backwards and returns a number'''
-    if (multiline):
-        if (lang in ["python"]):
-            return not((line.strip()[:3] == "'''") or (line.strip()[:3] == '"""'))
-        if (lang in ["c", "javascript"]):
-            return (line.strip()[:2] in ["/*"])
-        return False
-        
-    if (lang in ["python"]):
-        return line.strip()[0] == "#"
-    if (lang in ["c", "javascript"]):
-        return (line.strip()[-2:] == "*/") or (line.strip()[:2] in ["//", "/*"])
-    return False
-    
-def getFunctionCode(lines, lang, newfunc):                                    
-    '''Takes in the code, language and function start and end line
-    returns the lines of the function including comments
-    '''
-    startline = newfunc['start_line']-1
-    
-    if (lineIsComment(lang, lines[startline-1])):
-        #print("lines[startline-1]", lines[startline-1])
-        pass
-    
-    return "\n".join(lines[startline: newfunc['end_line']])
-    
 
 def main(args):
     kwargs = {}
@@ -151,7 +123,12 @@ def main(args):
                                         
                                     for c in m.changed_methods:
                                         newfunc = c.__dict__
-                                        newfunccode = getFunctionCode(lines, language, newfunc)
+
+                                        lump = ChangeLump(language, lines, func=c.__dict__)
+                                        lump.extendOverComments()
+                                        newfunccode = lump.code
+                                        if(args["verbose"]):
+                                            print ("Changed function lump\n", newfunccode)
                                         #newfunccode = "\n".join(lines[newfunc['start_line']-1: newfunc['end_line']])
                                         #print("newfunccode", newfunccode)
                                         newmod["code"].append(newfunccode)
@@ -179,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--fromcommit", dest="from_commit")
     parser.add_argument("-t", "--tocommit", dest="to_commit")
     parser.add_argument("-a", "--allbranches", action="store_true")
-    parser.add_argument("-v", "--verbose", action="store_false")
+    parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-b", "--branch", dest="branch")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("-d", "--dryrun", action="store_true")
