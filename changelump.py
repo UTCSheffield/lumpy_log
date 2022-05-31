@@ -1,61 +1,88 @@
 import re
 class ChangeLump(object):
-    def __init__(self, lang, lines, start=None, end=None, func=None):
-        self.verbose = False
+    def __init__(self, lang, lines, start=None, end=None, func=None, verbose=False):
+        self.verbose = verbose
         self.lang = lang
         self.lines = lines
         self.commentStart = None
         self.multiLineStart = None
         self.multiLine = False
-
+        
         if func is not None:
+            if True and self.verbose:
+               print("Function") 
             self.func = func
             self.start = max(0, func["start_line"] - 1)
-            self.end = func["end_line"] 
+            self.end = func["end_line"] - 1
         else:
             if(start is None):
                 self.start = 0
             else:
-                self.start = start
+                if True and self.verbose:
+                    print("Set from Start") 
+            
+                self.start = max(0, start - 1)
 
             if(end is None):
                 self.end = self.start
             else:
-                self.start = end
+                self.end = max(0, self.start, end - 1)
 
+        if False and self.verbose:
+            print("ChangeLump", "self.start", self.start,"len(self.lines)", len(self.lines))
+        
+    def extendOverText(self):
+        j = self.start-1
+        try:
+            while( j >= 0 and len(self.lines[j].strip())):
+                self.start = j
+                j -= 1
+        except Exception as e:
+            print("extendOverText", type(e), e, "j", j, "len(self.lines)", len(self.lines))
+        
+        k = self.end
+        while( k < len(self.lines) and len(self.lines[k].strip())):
+            self.end = k
+            k += 1
+        
+        if False and self.verbose:
+            print("extendOverText", "self.start", self.start,"j", j, "self.end",self.end,"k",k, "len(self.lines)",len(self.lines))
+        
+        
+    def inLump(self,i):
+        inLump = (self.start <= i and i <= self.end)
     
+        if False and self.verbose:
+            print("inLump", "self.start", self.start,"i", i, "inLump",inLump)
+        return inLump
+        
     def extendOverComments(self):
-        if self.verbose:
+        if True and self.verbose:
             print("extendOverComments", "self.start", self.start)
-        j = self.start - 1
-        while(j >= 0 and self.lineIsComment(j)):
-            self.commentStart = j
-            '''print("num", j, "line",self.lines[j].strip(),
-            "lineIsComment", self.lineIsComment(j)
-                , "self.commentStart",self.commentStart, "self.multiLineStart", self.multiLineStart
-                , "self.multiLine", self.multiLine)'''
+        j = self.start
+        while(j > 0 and self.lineIsComment(j-1)):
             j -= 1
+            self.commentStart = j
             
-
-
+            
     @property
     def code(self):    
         start = self.start 
         if(self.commentStart):
             start = self.commentStart     
 
-        code = "\n".join(self.lines[start: self.end])
-        if self.verbose:
+        code = "\n".join(self.lines[start: self.end+1])
+        if True and self.verbose:
             print("code", code)
         return code
     
     def lineIsComment(self, i):
         blineIsComment = self._lineIsComment(i)
-        if self.verbose:
+        if True and self.verbose:
             print("lineIsComment", blineIsComment, self.lines[i])
         return blineIsComment
 
-    # Abstracts out lineIsComment Sso we can  print the results
+    # Abstracts out lineIsComment so we can  print the results
     def _lineIsComment(self, i):
         firstLine = (i == self.start - 1 )
         line = self.lines[i].strip()
@@ -96,6 +123,5 @@ class ChangeLump(object):
                 print("Single", type(Err), Err)
                 print(self.lang.comment_family, comment_structure["single"])
             
-
         return False
         

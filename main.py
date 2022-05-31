@@ -90,24 +90,39 @@ def main(args):
                                 newmod["code"].append(m.source_code)
                                     
                             if m.change_type.name == "MODIFY":
+                                lines = str.splitlines(m.source_code)
+                                    
                                 if(False and args["verbose"]):
                                     print ("m.changed_methods", m.changed_methods)
                                 if (len(m.changed_methods)):
-                                    lines = str.splitlines(m.source_code)
-                                        
                                     for c in m.changed_methods:
                                         newfunc = c.__dict__
-                                        
-                                        lump = ChangeLump(language, lines, func=c.__dict__)
-                                        if(args["verbose"]):
-                                            lump.verbose = True
+                                        lump = ChangeLump(language, lines, func=c.__dict__, verbose=args["verbose"])
                                         lump.extendOverComments()
                                         newfunccode = lump.code
-                                        #newfunccode = "\n".join(lines[newfunc['start_line']-1: newfunc['end_line']])
-                                        #print("newfunccode", newfunccode)
                                         newmod["code"].append(newfunccode)
                                 else:
-                                    newmod["code"].append(m.source_code)
+                                    if(False and args["verbose"]):
+                                        print ("Change m", m.diff_parsed)
+                                    
+                                    lump = None
+                                    lumps = []
+                                    for (linenum, linetext) in m.diff_parsed["added"]:
+                                        if lump is None:
+                                            lump = ChangeLump(language, lines, start=linenum, verbose=args["verbose"])
+                                            lump.extendOverText()
+                                            lumps.append(lump)    
+                                        if(not lump.inLump(linenum-1)):
+                                            lump = ChangeLump(language, lines, start=linenum, verbose=args["verbose"])
+                                            lump.extendOverText()
+                                            lumps.append(lump)
+                                    
+                                    for lump in lumps:
+                                        if(False and args["verbose"]):
+                                            print("lump.code", lump.code)
+                                        newmod["code"].append(lump.code)
+                                    
+                                    #newmod["code"].append(m.source_code)
 
                             newcommit["markdown"] += "\n\n" + tModifiedFiles(newmod)
                             

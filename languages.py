@@ -19,7 +19,6 @@ class Languages(object):
     def all(self):
         return [self.getLanguage(Lang) for Lang in self.LANGUAGES.keys() if Lang is not None] 
         
-    
     def getByExtension(self, ext):
         Lang = self._getByExtension(ext)
         if(Lang is None):
