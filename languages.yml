@@ -55,6 +55,7 @@ ASP:
 ActionScript:
   type: programming
   lexer: ActionScript 3
+  comment_type: C
   color: "#e3491a"
   search_term: as3
   aliases:
@@ -187,7 +188,10 @@ Bro:
 
 C:
   type: programming
-  comment_type: c
+  comments: 
+    single: //
+    begin: /\*
+    end: \*/
   color: "#555"
   primary_extension: .c
   extensions:
@@ -195,7 +199,7 @@ C:
 
 C#:
   type: programming
-  comment_type: c
+  comment_type: C
   ace_mode: csharp
   search_term: csharp
   color: "#5a25a2"
@@ -207,7 +211,7 @@ C#:
 
 C++:
   type: programming
-  comment_type: c
+  comment_type: C
   ace_mode: c_cpp
   search_term: cpp
   color: "#f34b7d"
@@ -235,6 +239,11 @@ C2hs Haskell:
   type: programming
   lexer: Haskell
   group: Haskell
+  comments: 
+    single: "- -"
+    begin: "{-"
+    end:  "->"
+  
   aliases:
   - c2hs
   primary_extension: .chs
@@ -262,6 +271,10 @@ COBOL:
 
 CSS:
   ace_mode: css
+  comments: 
+    single: 
+    begin: "\\/\\*"
+    end: "\\*\\/"
   color: "#1f085e"
   primary_extension: .css
 
@@ -299,7 +312,7 @@ Clojure:
 
 CoffeeScript:
   type: programming
-  comment: C
+  comment_type: C
   ace_mode: coffee
   color: "#244776"
   aliases:
@@ -370,6 +383,7 @@ Cython:
 
 D:
   type: programming
+  comment_type: C
   color: "#fcd46d"
   primary_extension: .d
   extensions:
@@ -473,6 +487,7 @@ Emacs Lisp:
 Erlang:
   type: programming
   color: "#0faf8d"
+  comment_type: Prolog
   primary_extension: .erl
   extensions:
   - .hrl
@@ -480,6 +495,7 @@ Erlang:
 F#:
   type: programming
   lexer: FSharp
+  comment_type: C
   color: "#b845fc"
   search_term: fsharp
   aliases:
@@ -590,6 +606,7 @@ Glyph:
 
 Go:
   type: programming
+  comment_type: C
   color: "#a89b4d"
   primary_extension: .go
 
@@ -625,6 +642,7 @@ Groovy Server Pages:
 HTML:
   type: markup
   ace_mode: html
+  comment_type: XML
   aliases:
   - xhtml
   primary_extension: .html
@@ -636,10 +654,11 @@ HTML+Django:
   type: markup
   group: HTML
   lexer: HTML+Django/Jinja
-  primary_extension: .mustache # TODO: This is incorrect
+  primary_extension: .jinja # TODO: This is incorrect
   extensions:
   - .jinja
   - .mustache
+  - .j2
 
 HTML+ERB:
   type: markup
@@ -761,7 +780,7 @@ Jade:
 
 Java:
   type: programming
-  comment: C
+  comment_type: C
   ace_mode: java
   color: "#b07219"
   primary_extension: .java
@@ -770,13 +789,14 @@ Java Server Pages:
   group: Java
   lexer: Java Server Page
   search_term: jsp
+  comment_type: C
   aliases:
   - jsp
   primary_extension: .jsp
 
 JavaScript:
   type: programming
-  comment: C
+  comment_type: C
   ace_mode: javascript
   color: "#f15501"
   aliases:
@@ -800,6 +820,7 @@ JavaScript:
 Julia:
   type: programming
   primary_extension: .jl
+  comment_type: Shell
   color: "#a270ba"
 
 KRL:
@@ -811,6 +832,7 @@ KRL:
 Kotlin:
   type: programming
   primary_extension: .kt
+  comment_type: C
   extensions:
   - .ktm
   - .kts
@@ -853,7 +875,7 @@ Literate Agda:
 Literate CoffeeScript:
   type: programming
   group: CoffeeScript
-  comment: C
+  comment_type: C
   lexer: Text only
   ace_mode: markdown
   wrap: true
@@ -945,6 +967,7 @@ Markdown:
 
 Matlab:
   type: programming
+  comment_type: Prolog
   color: "#bb92ac"
   primary_extension: .matlab
 
@@ -1053,7 +1076,7 @@ ObjDump:
 
 Objective-C:
   type: programming
-  comment: C
+  comment_type: C
   color: "#438eff"
   aliases:
   - obj-c
@@ -1106,6 +1129,7 @@ Oxygene:
 PHP:
   type: programming
   ace_mode: php
+  comment_type: C
   color: "#6e03c1"
   primary_extension: .php
   extensions:
@@ -1143,6 +1167,7 @@ Parrot Assembly:
 Pascal:
   type: programming
   lexer: Delphi
+  comment_type: C
   color: "#b0ce4e"
   primary_extension: .pas
   extensions:
@@ -1154,6 +1179,10 @@ Perl:
   ace_mode: perl
   color: "#0298c3"
   primary_extension: .pl
+  comments: 
+    single: "#"
+    begin: =begin
+    end: =end
   extensions:
   - .PL
   - .nqp
@@ -1181,6 +1210,7 @@ PogoScript:
 PowerShell:
   type: programming
   ace_mode: powershell
+  comment_type: Shell
   aliases:
   - posh
   primary_extension: .ps1
@@ -1191,7 +1221,7 @@ PowerShell:
 Processing:
   type: programming
   lexer: Java
-  comment: C
+  comment_type: C
   color: "#2779ab"
   primary_extension: .pde
 
@@ -1226,6 +1256,10 @@ Pure Data:
 
 Python:
   type: programming
+  comments: 
+    single: "#"
+    begin: "^['\"]{3}"
+    end: "['\"]{3}$" #Not complete
   ace_mode: python
   color: "#3581ba"
   primary_extension: .py
@@ -1253,6 +1287,7 @@ QML:
 R:
   type: programming
   color: "#198ce7"
+  comment_type: Shell
   lexer: S
   primary_extension: .r
   extensions:
@@ -1325,6 +1360,7 @@ Rouge:
 Ruby:
   type: programming
   ace_mode: ruby
+  comment_type: Perl
   color: "#701516"
   aliases:
   - jruby
@@ -1357,6 +1393,7 @@ Ruby:
 
 Rust:
   type: programming
+  comment_type: C
   color: "#dea584"
   primary_extension: .rs
 
@@ -1386,6 +1423,7 @@ Sass:
 Scala:
   type: programming
   ace_mode: scala
+  comment_type: C
   color: "#7dd3b0"
   primary_extension: .scala
 
@@ -1414,6 +1452,10 @@ Self:
 
 Shell:
   type: programming
+  comments: 
+    single: "#"
+    begin: 
+    end: 
   lexer: Bash
   search_term: bash
   color: "#5861ce"
@@ -1485,6 +1527,7 @@ Tcsh:
 TeX:
   type: markup
   ace_mode: latex
+  comment_type: Prolog
   aliases:
   - latex
   primary_extension: .tex
@@ -1527,6 +1570,7 @@ Twig:
 
 TypeScript:
   type: programming
+  comment_type: C
   color: "#31859c"
   aliases:
   - ts
@@ -1605,6 +1649,10 @@ XC:
 XML:
   type: markup
   ace_mode: xml
+  comments: 
+    single: 
+    begin: \<\!--
+    end: --\>
   aliases:
   - rss
   - xsd
@@ -1680,6 +1728,7 @@ XS:
 
 XSLT:
   type: programming
+  comment_type: XML
   aliases:
   - xsl
   primary_extension: .xslt

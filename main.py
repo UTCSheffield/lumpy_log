@@ -6,36 +6,10 @@ from re import split
 import sys, os
 from pydriller import Repository
 from changelump import ChangeLump
+from languages import Languages
 
 ## pip3 install pydriller pybars4
-
-LANGUAGES_PATH = "languages.yml"
-
-def morphLang(aLang):
-    oLang = aLang[1]
-    oLang['lang'] = aLang[0]
-    return oLang
-
-with open(LANGUAGES_PATH, 'r') as file:
-    LANGUAGES = [morphLang(Lang) for Lang in yaml.safe_load(file).items()]
-    
-def getFileLanguage(ext):
-    primary = [val for val in LANGUAGES if val['primary_extension'] == ext] 
-    
-    if (len(primary)):
-        if 'ace_mode' in primary[0]:
-            return primary[0]['ace_mode']
-        return primary[0]['lang'].lower()
-        
-    secondary = [val for val in LANGUAGES if 'extensions' in val and ext in val['extensions']] 
-    
-    if (len(secondary)):
-        if 'ace_mode' in secondary[0]:
-            return secondary[0]['ace_mode']
-        return secondary[0]['lang'].lower()
-    
-    return ext[1:]
-
+languages = Languages()
 
 with open(os.path.join("templates","commit.hbs")) as f:
     sCommit = f.read()
@@ -99,7 +73,7 @@ def main(args):
                 if hasattr(commit, "modified_files"):
                     for m in commit.modified_files:
                         filename, file_extension = os.path.splitext(m.filename)
-                        language = getFileLanguage(file_extension)
+                        language = languages.getByExtension(file_extension)
                         change_verb = m.change_type.name[0]+m.change_type.name[1:].lower()
                         
                         newmod = {
@@ -108,7 +82,7 @@ def main(args):
                             "change_verb": change_verb,
                             "change_verb_past": change_verbs_past[m.change_type.name],
                             "code" : [],
-                            "language": language
+                            "language": language.mdname
                         }
                                             
                         if m.filename.lower().endswith(('.png', '.jpg', '.jpeg', 'gif')) == False:                    
@@ -123,12 +97,12 @@ def main(args):
                                         
                                     for c in m.changed_methods:
                                         newfunc = c.__dict__
-
+                                        
                                         lump = ChangeLump(language, lines, func=c.__dict__)
+                                        if(args["verbose"]):
+                                            lump.verbose = True
                                         lump.extendOverComments()
                                         newfunccode = lump.code
-                                        if(args["verbose"]):
-                                            print ("Changed function lump\n", newfunccode)
                                         #newfunccode = "\n".join(lines[newfunc['start_line']-1: newfunc['end_line']])
                                         #print("newfunccode", newfunccode)
                                         newmod["code"].append(newfunccode)

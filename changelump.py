@@ -1,5 +1,7 @@
+import re
 class ChangeLump(object):
     def __init__(self, lang, lines, start=None, end=None, func=None):
+        self.verbose = False
         self.lang = lang
         self.lines = lines
         self.commentStart = None
@@ -23,7 +25,8 @@ class ChangeLump(object):
 
     
     def extendOverComments(self):
-        #print("extendOverComments", "self.start", self.start)
+        if self.verbose:
+            print("extendOverComments", "self.start", self.start)
         j = self.start - 1
         while(j >= 0 and self.lineIsComment(j)):
             self.commentStart = j
@@ -42,40 +45,57 @@ class ChangeLump(object):
             start = self.commentStart     
 
         code = "\n".join(self.lines[start: self.end])
-        #print("code", code)
+        if self.verbose:
+            print("code", code)
         return code
     
-    # languages.yml now contains a comment field 
-    # i.e. comment : C 
-    # https://geekflare.com/how-to-add-comments/
     def lineIsComment(self, i):
+        blineIsComment = self._lineIsComment(i)
+        if self.verbose:
+            print("lineIsComment", blineIsComment, self.lines[i])
+        return blineIsComment
+
+    # Abstracts out lineIsComment Sso we can  print the results
+    def _lineIsComment(self, i):
         firstLine = (i == self.start - 1 )
         line = self.lines[i].strip()
 
-        if (self.multiLine and self.multiLineStart is None):
-            if (self.lang in ["python"]) and (line[:3] in [ "'''" , '"""']):
-                self.multiLineStart = i
-                return True
-            if (self.lang in ["c", "javascript"]) and (line[:2] in ["/*"]):
-                self.multiLineStart = i
-                return True
-            return True
-        
+        if(False and self.verbose):
+            print(self.lang.name, "self.lang.comment_structure",self.lang.comment_structure)
+        comment_structure = self.lang.comment_structure
+
+        if (comment_structure["begin"] ):
+            try:
+                beginmatches = re.findall(comment_structure["begin"],line)
+                endmatches = re.findall( comment_structure["end"],line)
+            
+                if (firstLine and len(beginmatches) and len(beginmatches) == len(endmatches)): #both on same line
+                    return True
+
+                if(self.multiLine and self.multiLineStart is None):
+                    if (len(beginmatches)):
+                        self.multiLineStart = i
+                        return True
+                    return True
+
+                if(firstLine and len(endmatches)):
+                    self.multiLine = True
+                    return True
+            except Exception as Err:
+                print(type(Err), Err)
+                print(self.lang.comment_family, comment_structure)
+
         if(len(line) == 0):
             return False
-
-        if(firstLine):
-            if (self.lang in ["python"]) and (line[-3:] in [ "'''" , '"""']):
-                self.multiLine = True
-                return True
-            if (self.lang in ["c", "javascript"]) and (line[-2:] in ["*/"]):
-                self.multiLine = True
-                return True
         
-        if (self.lang in ["python"]):
-            return line[0] == "#"
-        if (self.lang in ["c", "javascript"]):
-            return (line[:2] in ["//"])
+        if (comment_structure["single"]):
+            try:
+                singlematches = re.findall( comment_structure["single"], line)
+                return len(singlematches)>0
+            except Exception as Err:
+                print("Single", type(Err), Err)
+                print(self.lang.comment_family, comment_structure["single"])
+            
 
         return False
         
