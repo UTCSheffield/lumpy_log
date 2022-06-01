@@ -7,10 +7,10 @@ class ChangeLump(object):
         self.commentStart = None
         self.multiLineStart = None
         self.multiLine = False
+        self.source = None
         
         if func is not None:
-            if True and self.verbose:
-               print("Function") 
+            self.source = "Function" 
             self.func = func
             self.start = max(0, func["start_line"] - 1)
             self.end = func["end_line"] - 1
@@ -18,9 +18,7 @@ class ChangeLump(object):
             if(start is None):
                 self.start = 0
             else:
-                if True and self.verbose:
-                    print("Set from Start") 
-            
+                self.source = "Line Changed" 
                 self.start = max(0, start - 1)
 
             if(end is None):
@@ -71,7 +69,8 @@ class ChangeLump(object):
         if(self.commentStart):
             start = self.commentStart     
 
-        code = "\n".join(self.lines[start: self.end+1])
+        #code = ""self.source+"\n"+
+        code = ("\n".join(self.lines[start: self.end+1]))
         if True and self.verbose:
             print("code", code)
         return code

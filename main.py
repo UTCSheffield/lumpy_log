@@ -82,13 +82,15 @@ def main(args):
                             "change_verb": change_verb,
                             "change_verb_past": change_verbs_past[m.change_type.name],
                             "code" : [],
-                            "language": language.mdname
+                            "lumps": [],
+                            "language": language.mdname,
+                            "source":""
                         }
                                             
                         if m.filename.lower().endswith(('.png', '.jpg', '.jpeg', 'gif')) == False:                    
                             if m.change_type.name == "ADD":
                                 newmod["code"].append(m.source_code)
-                                    
+                                
                             if m.change_type.name == "MODIFY":
                                 lines = str.splitlines(m.source_code)
                                     
@@ -100,10 +102,14 @@ def main(args):
                                         lump = ChangeLump(language, lines, func=c.__dict__, verbose=args["verbose"])
                                         lump.extendOverComments()
                                         newfunccode = lump.code
+                                        newmod["source"] = "changed_methods"
                                         newmod["code"].append(newfunccode)
+                                        newmod["lumps"].append(lump)
                                 else:
                                     if(False and args["verbose"]):
                                         print ("Change m", m.diff_parsed)
+                                    
+                                    newmod["source"] = "line change"
                                     
                                     lump = None
                                     lumps = []
@@ -121,6 +127,7 @@ def main(args):
                                         if(False and args["verbose"]):
                                             print("lump.code", lump.code)
                                         newmod["code"].append(lump.code)
+                                        newmod["lumps"].append(lump)
                                     
                                     #newmod["code"].append(m.source_code)
 
