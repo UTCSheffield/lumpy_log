@@ -5,7 +5,7 @@ from genericpath import exists
 from re import split
 import sys, os
 from pydriller import Repository
-from changelump import ChangeLump
+from change_lump import ChangeLump
 from languages import Languages
 
 ## pip3 install pydriller pybars4

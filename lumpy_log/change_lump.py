@@ -1,4 +1,5 @@
 import re
+
 class ChangeLump(object):
     def __init__(self, lang, lines, start=None, end=None, func=None, verbose=False):
         self.verbose = verbose

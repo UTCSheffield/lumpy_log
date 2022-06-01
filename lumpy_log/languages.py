@@ -18,7 +18,7 @@ class Languages(object):
     @property
     def all(self):
         return [self.getLanguage(Lang) for Lang in self.LANGUAGES.keys() if Lang is not None] 
-        
+
     def getByExtension(self, ext):
         Lang = self._getByExtension(ext)
         if(Lang is None):
@@ -38,7 +38,8 @@ class Languages(object):
                 newLang.comment_lang = self.getLanguage(newLang.comment_family)
 
             return newLang
-        return None
+        return Language(Lang,{"type":"data"})
+        
 
     def _getByExtension(self, ext):
         primary = [Lang for Lang in self.LANGUAGES if self.LANGUAGES[Lang]['primary_extension'] == ext] 
