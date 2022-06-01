@@ -22,11 +22,12 @@ class TestChangeLump(unittest.TestCase):
     @params((JavaScript, JavaScript_lines), (Python, Python_lines), (Handlebars, Handlebars_lines), (HTML, HTML_lines))
     def test___init__start(self, lang, lines, start=None):
         Lump = ChangeLump(lang, lines)
-        
+
     '''
     def test___init__lines(self, lang, lines, start=None, end=None, func=None, verbose=False):
 
-    '''
+
 
     def test__getByExtension(self, ext, lang):
         self.assertEqual(, lang)
+            '''
