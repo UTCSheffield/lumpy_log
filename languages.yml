@@ -1257,7 +1257,7 @@ Pure Data:
 Python:
   type: programming
   comments: 
-    single: "#"
+    single: "[#@]"
     begin: "^['\"]{3}"
     end: "['\"]{3}$" #Not complete
   ace_mode: python
