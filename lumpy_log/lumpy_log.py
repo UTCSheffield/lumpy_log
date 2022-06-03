@@ -5,17 +5,26 @@ from genericpath import exists
 from re import split
 import sys, os
 from pydriller import Repository
-from change_lump import ChangeLump
-from languages import Languages
+from .change_lump import ChangeLump
+from .languages import Languages
+from importlib_resources import files, as_file
+# Reads contents with UTF-8 encoding and returns str.
+
 
 ## pip3 install pydriller pybars4
 languages = Languages()
 
-with open(os.path.join("templates","commit.hbs")) as f:
-    sCommit = f.read()
 
-with open(os.path.join("templates","modified_files.hbs")) as f:
-    sModifiedFiles = f.read()
+sCommit = files("lumpy_log.templates").joinpath('commit.hbs').read_text()
+sModifiedFiles = files("lumpy_log.templates").joinpath('modified_files.hbs').read_text()
+
+#with as_file(files('lumpy_log.templates').joinpath('commit.hbs')) as f:
+#with open(os.path.join(".","templates","commit.hbs")) as f:
+#    sCommit = f.read()
+
+#with as_file(files('lumpy_log.templates').joinpath('modified_files.hbs')) as f:
+#with open(os.path.join("templates","modified_files.hbs")) as f:
+#    sModifiedFiles = f.read()
 
 compiler = Compiler()
 
