@@ -7,31 +7,19 @@ import sys, os
 from pydriller import Repository
 from .change_lump import ChangeLump
 from .languages import Languages
-from importlib_resources import files, as_file
-# Reads contents with UTF-8 encoding and returns str.
-
+from importlib_resources import files
 
 ## pip3 install pydriller pybars4
 languages = Languages()
 
-
 sCommit = files("lumpy_log.templates").joinpath('commit.hbs').read_text()
 sModifiedFiles = files("lumpy_log.templates").joinpath('modified_files.hbs').read_text()
-
-#with as_file(files('lumpy_log.templates').joinpath('commit.hbs')) as f:
-#with open(os.path.join(".","templates","commit.hbs")) as f:
-#    sCommit = f.read()
-
-#with as_file(files('lumpy_log.templates').joinpath('modified_files.hbs')) as f:
-#with open(os.path.join("templates","modified_files.hbs")) as f:
-#    sModifiedFiles = f.read()
 
 compiler = Compiler()
 
 # Compile the template
 tCommit = compiler.compile(sCommit)
 tModifiedFiles = compiler.compile(sModifiedFiles)
-
 
 change_verbs_past = {
     "ADD" : "Added",
@@ -156,7 +144,7 @@ def main(args):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(prog='Prettify GitHub Log', description='Make git logs easier for use in scenerioas when communicating the progress of a project to none experts.')
-    parser.add_argument("-i", "--repo", default='https://github.com/UTCSheffield/prettify-gh-log.git')
+    parser.add_argument("-r", "--repo", default='https://github.com/UTCSheffield/lumpy_log.git')
     parser.add_argument("-o", "--outputfolder", default="output")
     parser.add_argument("-f", "--fromcommit", dest="from_commit")
     parser.add_argument("-t", "--tocommit", dest="to_commit")

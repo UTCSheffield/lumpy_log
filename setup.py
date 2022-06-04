@@ -30,7 +30,7 @@ setup(
         # If any package contains *.txt files, include them:
         "": ["*.yml", "*.hbs"],
     },
-    python_requires='>=3.5',
+    python_requires='>=3.7',
     install_requires=requirements,
     tests_require=requirements + test_requirements,
     test_suite='nose2.collector.collector',

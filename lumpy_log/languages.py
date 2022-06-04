@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 from ast import Str
 import yaml
+from importlib_resources import files
 
 class Languages(object):
     def __init__(self, LANGUAGES_PATH = "languages.yml"):
         self.LANGUAGES_PATH = LANGUAGES_PATH
-        with open(self.LANGUAGES_PATH, 'r') as file:
-            #self.LANGUAGES = [Language(sLang, oLang) for sLang, oLang in yaml.safe_load(file).items()]
-            self.LANGUAGES = yaml.safe_load(file)
+        sLanguages = files("lumpy_log").joinpath(self.LANGUAGES_PATH).read_text()
+        self.LANGUAGES = yaml.safe_load(sLanguages)
 
     # TODO : Cache the fetched language objects
 
