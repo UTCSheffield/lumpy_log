@@ -2,14 +2,11 @@
 
 from setuptools import setup, find_packages
 
+with open('requirements.txt') as requirements_file:
+    requirements = requirements_file.read().splitlines()
 
-with open('requirements.txt') as reqs_file:
-    requirements = reqs_file.read().splitlines()
-
-with open('test-requirements.txt') as reqs_file:
-    test_requirements = reqs_file.read().splitlines()
-
-
+with open('test-requirements.txt') as requirements_file:
+    test_requirements = requirements_file.read().splitlines()
 
 setup(
     name='lumpy_log',

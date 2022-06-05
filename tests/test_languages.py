@@ -18,12 +18,12 @@ class TestLanguages():
         languages = Languages()
         assert languages.getByExtension(ext).name == lang
 
-    @pytest.mark.parametrize("ext, mdname", 
+    @pytest.mark.parametrize("ext, markdown_name", 
         [(".py", "python"), (".java", "java"), (".js", "javascript"), (".css", "css")]
     )
-    def test_mdname(self, ext, mdname):
+    def test_markdown_name(self, ext, markdown_name):
         languages = Languages()
-        assert languages.getByExtension(ext).mdname == mdname
+        assert languages.getByExtension(ext).markdown_name == markdown_name
 
     @pytest.mark.parametrize("ext, comment_family", 
         [(".py", "Python"), (".java", "C"), (".js", "C"), (".css", "CSS")]

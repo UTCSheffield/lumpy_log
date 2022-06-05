@@ -80,7 +80,7 @@ class Language(object):
         return None
 
     @property
-    def mdname(self):
+    def markdown_name(self):
         if "ace_mode" in self.oLang and self.oLang["ace_mode"]:
             return self.oLang["ace_mode"]
         return self.name.lower()
