@@ -17,6 +17,8 @@ class LumpyLog(object):
     sCommit = ""
     sModifiedFiles = ""
     commits = []
+    repo = None
+    lumpyCommits = None
 
     change_verbs_past = {
         "ADD" : "Added",
@@ -32,16 +34,30 @@ class LumpyLog(object):
     def __init__(self, args):
         ## pip3 install pydriller pybars4
         
+        # TODO : Override for templates 
         sCommit = files("lumpy_log.templates").joinpath('commit.hbs').read_text()
         sModifiedFiles = files("lumpy_log.templates").joinpath('modified_files.hbs').read_text()
 
         compiler = Compiler()
 
         # Compile the template
-        tCommit = compiler.compile(sCommit)
-        tModifiedFiles = compiler.compile(sModifiedFiles)
+        self.tCommit = compiler.compile(sCommit)
+        self.tModifiedFiles = compiler.compile(sModifiedFiles)
 
         self.args = args
+        kwargs = {}
+        for param in self.args.keys():
+            if not param in self.excludeParams:
+                if self.args[param]:
+                    kwargs[param] = self.args[param]
+
+        if not exists(self.args['outputfolder']):
+            os.makedirs(self.args['outputfolder'])
+
+        self.repo = Repository(self.args['repo'], **kwargs)
+        
+        print("self.commits", len(self.commits))
+        
 
     def isRelevant(self, commit):
         return (self.args["allbranches"] or (
@@ -67,20 +83,14 @@ class LumpyLog(object):
                 
     @property
     def commits(self):
-        kwargs = {}
-        for param in self.args.keys():
-            if not param in self.excludeParams:
-                if self.args[param]:
-                    kwargs[param] = self.args[param]
-
-        if not exists(self.args['outputfolder']):
-            os.makedirs(self.args['outputfolder'])
-
-        commits = Repository(self.args['repo'], **kwargs).traverse_commits().filter(self.isRelevant)
+        if(self.lumpyCommits):
+            return self.lumpyCommits
+        commits = filter(self.isRelevant, self.repo.traverse_commits())
         
-        lumpyCommits = commits.map()
+        # TODO can  i keep the whole thing a genrator and use yields to keep the memory down
+        lumpyCommits = list(map(lumpyCommit, commits))
         
-        return commits
+        return lumpyCommits
     
 class lumpyFile(wrapt.ObjectProxy):
     lumps = []

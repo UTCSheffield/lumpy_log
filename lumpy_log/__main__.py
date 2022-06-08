@@ -1,5 +1,5 @@
 import argparse
-from .lumpy_log import main
+from .lumpy_log import LumpyLog
 
 parser = argparse.ArgumentParser(prog='Prettify GitHub Log', description='Make git logs easier for use in scenarios when communicating the progress of a project to none experts.')
 parser.add_argument("-r", "--repo", default='https://github.com/UTCSheffield/lumpy_log.git')
@@ -13,4 +13,5 @@ parser.add_argument("--force", action="store_true")
 parser.add_argument("-d", "--dryrun", action="store_true")
 args = parser.parse_args()
 
-main(vars(args))
+
+log = LumpyLog(vars(args))

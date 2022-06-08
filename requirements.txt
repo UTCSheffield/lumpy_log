@@ -2,3 +2,4 @@ pydriller
 pybars4
 importlib_resources
 wrapt
+pyyaml

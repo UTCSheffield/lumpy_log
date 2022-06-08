@@ -1,0 +1,28 @@
+{
+    "python.languageServer": "Pylance",
+    "python.linting.pylintEnabled": false,
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingModuleSource": "none"
+    },
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./tests",
+        "-p",
+        "test_*.py"
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.defaultInterpreterPath": "python3.8",
+    "python.autoComplete.extraPaths": [
+    
+    ],
+    "python.analysis.extraPaths": [],
+    "cSpell.words": [
+        "lexer",
+        "Martyn"
+    ]
+}
