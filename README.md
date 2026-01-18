@@ -98,3 +98,13 @@ python -m build
 # Upload to PyPI (requires credentials)
 twine upload dist/*
 ```
+
+# Lumpy Log
+
+## Running Tests
+
+To run the tests, use the following command:
+
+```bash
+pytest
+```
