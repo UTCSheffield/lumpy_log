@@ -1,26 +1,84 @@
-# Prettify GitHub Log
-Actually this will work on all Git Logs but...
+# Lumpy Log - Prettified Git Logs
 
-## Aims
+Make git logs easier for use in scenarios when communicating the progress of a project to non-experts.
 
-Make git logs easier for use in scenerioas when communicating the progress of a project to none experts.
+## Features
 
-## Note
--
-This isn't great but it does the job (a bit).
+- Generates readable markdown reports from Git commit history
+
+📚 **See Also:**
+- [Obsidian Integration Guide](OBSIDIAN.md) - Detailed guide for using with Obsidian
+- [Development Guide](DEVELOPMENT.md) - For contributors and developers
+- [Publishing Guide](PUBLISHING.md) - How to publish to PyPI
+- [Quick Start](QUICKSTART.md) - Quick reference
 
 ## Installation
 
+### From PyPI (when published)
+
 ```bash
-python -m pip install pydriller Pygments Jinja2
+pip install lumpy-log
+```
+
+### For Development
+
+```bash
+# Clone the repository
+git clone https://github.com/UTCSheffield/lumpy_log.git
+cd lumpy_log
+
+# Install in editable mode
+pip install -e .
 ```
 
 ## Usage
 
+### As a CLI Command
+
+After installation, you can use the `lumpy-log` command:
+
 ```bash
-python main.py -i <repo> -o <outputfile>
+# Process current directory repository
+lumpy-log
+
+# Process a specific repository
+lumpy-log -i /path/to/repo -o /path/to/output
+
+# Process with options
+lumpy-log -i /path/to/repo -o output --verbose --force
 ```
 
-repo is the local repository folder
+### As a Python Module
 
-outputfile is the full file path to a file to save the html into.
+You can also run it as a module:
+
+```bash
+python -m lumpy_log -i /path/to/repo -o output
+```
+
+### Command-line Options
+
+- `-i, --repo`: Path to the local Git repository (default: current directory)
+- `-o, --outputfolder`: Output folder for generated files (default: output)
+- `-f, --fromcommit`: Start from this commit
+- `-t, --tocommit`: End at this commit
+- `-a, --allbranches`: Include all branches
+- `-v, --verbose`: Verbose output
+- `-b, --branch`: Specific branch to process
+- `--force`: Force overwrite existing files
+- `-d, --dryrun`: Dry run - don't write files
+- `-n, --no-obsidian-index`: Don't generate index.md
+
+
+## Building for PyPI
+
+```bash
+# Install build tools
+pip install build twine
+
+# Build the package
+python -m build
+
+# Upload to PyPI (requires credentials)
+twine upload dist/*
+```

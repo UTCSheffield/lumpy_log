@@ -1,0 +1,30 @@
+# Exclude build artifacts
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Exclude virtual environments
+venv/
+env/
+ENV/
+
+# Exclude IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Exclude output files
+output/
+*.md
+
+# Exclude OS files
+.DS_Store
+Thumbs.db

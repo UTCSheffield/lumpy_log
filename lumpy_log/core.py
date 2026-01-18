@@ -1,27 +1,30 @@
 #!/usr/bin/python3
 import yaml
-from pybars import Compiler # http://handlebarsjs.com documentation
+from jinja2 import Environment, FileSystemLoader
 from genericpath import exists
 from re import split
 import sys, os
 from pydriller import Repository
-from changelump import ChangeLump
-from languages import Languages
+from .changelump import ChangeLump
+from .languages import Languages
 
-## pip3 install pydriller pybars4
-languages = Languages()
+def _get_template_path(filename):
+    """Get the absolute path to a template file"""
+    package_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(package_dir, "templates", filename)
 
-with open(os.path.join("templates","commit.hbs")) as f:
-    sCommit = f.read()
+def _get_templates_dir():
+    """Get the templates directory path"""
+    package_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(package_dir, "templates")
 
-with open(os.path.join("templates","modified_files.hbs")) as f:
-    sModifiedFiles = f.read()
+languages = Languages(os.path.join(os.path.dirname(os.path.abspath(__file__)), "languages.yml"))
 
-compiler = Compiler()
-
-# Compile the template
-tCommit = compiler.compile(sCommit)
-tModifiedFiles = compiler.compile(sModifiedFiles)
+# Set up Jinja2 environment
+jinja_env = Environment(loader=FileSystemLoader(_get_templates_dir()))
+tCommit = jinja_env.get_template("commit.md")
+tModifiedFiles = jinja_env.get_template("modified_files.md")
+tObsidianIndex = jinja_env.get_template("obsidian_index.md")
 
 
 change_verbs_past = {
@@ -36,7 +39,18 @@ change_verbs_past = {
 def main(args):
     kwargs = {}
     for param in args.keys():
-        if not param in ["dryrun","outputfolder", "force","verbose", "allbranches", "branch", "repo", "HCTI_API_USER_ID", "HCTI_API_KEY"]:
+        if not param in [
+            "dryrun",
+            "outputfolder",
+            "force",
+            "verbose",
+            "allbranches",
+            "branch",
+            "repo",
+            "obsidian_index",
+            "HCTI_API_USER_ID",
+            "HCTI_API_KEY",
+        ]:
             if args[param]:
                 kwargs[param] = args[param]
 
@@ -53,7 +67,7 @@ def main(args):
             (args["branch"] is None and commit.in_main_branch)
             or (args["branch"] in commit.branches) 
         )):
-            genfilename = commit.author_date.strftime("%Y%m%d %H%M")+" "+commit.hash[:4]
+            genfilename = commit.author_date.strftime("%Y%m%d_%H%M")+"_"+commit.hash[:7]
             genfilepath = os.path.join(args['outputfolder'], genfilename+".md")
             
             if(args["force"] or not os.path.exists(genfilepath)):
@@ -68,7 +82,7 @@ def main(args):
                     "author_date":commit.author_date,
                     "modifications":[],
                 }
-                newcommit["markdown"] = tCommit(newcommit)
+                newcommit["markdown"] = tCommit.render(newcommit)
                         
                 if hasattr(commit, "modified_files"):
                     for m in commit.modified_files:
@@ -131,7 +145,7 @@ def main(args):
                                     
                                     #newmod["code"].append(m.source_code)
 
-                            newcommit["markdown"] += "\n\n" + tModifiedFiles(newmod)
+                            newcommit["markdown"] += "\n\n" + tModifiedFiles.render(newmod)
                             
                         newcommit["modifications"].append(newmod)
                 
@@ -143,20 +157,21 @@ def main(args):
                         #file1.write("\n\n".join(newcommit["markdown"]))
                         file1.write(newcommit["markdown"])
     
-                    
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(prog='Prettify GitHub Log', description='Make git logs easier for use in scenerioas when communicating the progress of a project to none experts.')
-    parser.add_argument("-i", "--repo", default='https://github.com/UTCSheffield/prettify-gh-log.git')
-    parser.add_argument("-o", "--outputfolder", default="output")
-    parser.add_argument("-f", "--fromcommit", dest="from_commit")
-    parser.add_argument("-t", "--tocommit", dest="to_commit")
-    parser.add_argument("-a", "--allbranches", action="store_true")
-    parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("-b", "--branch", dest="branch")
-    parser.add_argument("--force", action="store_true")
-    parser.add_argument("-d", "--dryrun", action="store_true")
-    args = parser.parse_args()
-    
-    main(vars(args))
+        # Generate Obsidian index file if requested
+        if not args["dryrun"] and args.get("obsidian_index", True):
+            from datetime import datetime
+            index_path = os.path.join(args['outputfolder'], "index.md")
+            index_content = tObsidianIndex.render({
+                "generation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "repo_path": args['repo'],
+                "total_commits": len(commits),
+                "commits": sorted(commits, key=lambda x: x['author_date'], reverse=True)
+            })
+        
+            with open(index_path, "w") as f:
+                f.write(index_content)
+        
+            if args["verbose"]:
+                print(f"Generated Obsidian index: {index_path}")
+
     
