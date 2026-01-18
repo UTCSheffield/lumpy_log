@@ -4,6 +4,7 @@ from jinja2 import Environment, FileSystemLoader
 from genericpath import exists
 from re import split
 import sys, os
+import pathspec
 from pydriller import Repository
 from .changelump import ChangeLump
 from .languages import Languages
@@ -36,6 +37,28 @@ change_verbs_past = {
     "UNKNOWN" : "Unknown"
 }
 
+def _load_lumpy_ignore(repo_path: str):
+    """Load .lumpyignore patterns (gitignore-style), with built-in defaults.
+
+    Built-in defaults: ignore Markdown files ("*.md").
+    """
+    default_patterns = ["*.md"]
+    ignore_file = os.path.join(repo_path, ".lumpyignore")
+
+    patterns = list(default_patterns)
+    if os.path.isfile(ignore_file):
+        try:
+            with open(ignore_file, "r", encoding="utf-8") as f:
+                # PathSpec.from_lines handles comments; keep non-empty lines
+                file_lines = [line.rstrip("\n") for line in f.readlines()]
+                patterns.extend([l for l in file_lines if l.strip() != ""])
+        except Exception as e:
+            # Fail soft: proceed with defaults if file can't be read
+            if __name__ == "__main__" or os.environ.get("LUMPY_LOG_VERBOSE_ERRORS"):
+                print(f"Warning: could not read .lumpyignore: {e}")
+
+    return pathspec.PathSpec.from_lines("gitwildmatch", patterns)
+
 def main(args):
     kwargs = {}
     for param in args.keys():
@@ -54,13 +77,17 @@ def main(args):
             if args[param]:
                 kwargs[param] = args[param]
 
-    if not exists(args['outputfolder']):
+    # Only create the output directory when not a dry run
+    if not args.get('dryrun') and not exists(args['outputfolder']):
         os.makedirs(args['outputfolder'])
 
     commits = []
 
     #print("args", args)
     #return
+
+    # Build ignore spec once per run
+    ignore_spec = _load_lumpy_ignore(args['repo'])
 
     for commit in Repository(args['repo'], **kwargs).traverse_commits():
         if(args["allbranches"] or (
@@ -86,6 +113,15 @@ def main(args):
                         
                 if hasattr(commit, "modified_files"):
                     for m in commit.modified_files:
+                        # Skip files that match .lumpyignore patterns
+                        try:
+                            if ignore_spec and ignore_spec.match_file(m.filename):
+                                if(args["verbose"]):
+                                    print(f"Ignoring per .lumpyignore: {m.filename}")
+                                continue
+                        except Exception:
+                            # If matching fails for any reason, do not block processing
+                            pass
                         filename, file_extension = os.path.splitext(m.filename)
                         language = languages.getByExtension(file_extension)
                         change_verb = m.change_type.name[0]+m.change_type.name[1:].lower()

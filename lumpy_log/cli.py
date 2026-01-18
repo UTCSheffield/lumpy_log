@@ -16,8 +16,8 @@ def main():
     )
     parser.add_argument(
         "-o", "--outputfolder",
-        default="content",
-        help="Output folder for generated files (default: content)"
+        default="output",
+        help="Output folder for generated files (default: output)"
     )
     parser.add_argument(
         "-f", "--fromcommit",

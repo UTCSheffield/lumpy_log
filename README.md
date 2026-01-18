@@ -69,6 +69,22 @@ python -m lumpy_log -i /path/to/repo -o output
 - `-d, --dryrun`: Dry run - don't write files
 - `-n, --no-obsidian-index`: Don't generate index.md
 
+### Ignoring Files (.lumpyignore)
+
+Lumpy Log respects a repository-level `.lumpyignore` file using the same syntax as `.gitignore` (git wildmatch patterns). By default, it ignores Markdown files (`*.md`) so documentation changes don't flood the logs. Add additional patterns to `.lumpyignore` at your repo root to skip files or folders.
+
+Example `.lumpyignore`:
+
+```
+# Ignore Markdown (default)
+*.md
+
+# Ignore generated docs and build artifacts
+docs/
+dist/
+*.tmp
+```
+
 
 ## Building for PyPI
 

@@ -30,6 +30,7 @@ dependencies = [
     "pygments",
     "jinja2",
     "pyyaml",
+    "pathspec",
 ]
 
 [project.urls]
