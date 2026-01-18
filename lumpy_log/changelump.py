@@ -58,12 +58,12 @@ class ChangeLump(object):
     def inLump(self,i):
         inLump = (self.start <= i and i <= self.end)
     
-        if False and self.verbose:
+        if self.verbose:
             print("inLump", "self.start", self.start,"i", i, "inLump",inLump)
         return inLump
         
     def extendOverComments(self):
-        if True and self.verbose:
+        if self.verbose:
             print("extendOverComments", "self.start", self.start)
         j = self.start
         while(j > 0 and self.lineIsComment(j-1)):
@@ -79,13 +79,13 @@ class ChangeLump(object):
 
         #code = ""self.source+"\n"+
         code = ("\n".join(self.lines[start: self.end+1]))
-        if True and self.verbose:
+        if self.verbose:
             print("code", code)
         return code
     
     def lineIsComment(self, i):
         blineIsComment = self._lineIsComment(i)
-        if True and self.verbose:
+        if self.verbose:
             print("lineIsComment", blineIsComment, self.lines[i])
         return blineIsComment
 
@@ -111,7 +111,6 @@ class ChangeLump(object):
                 if len(beginmatches) and len(endmatches):
                     return True
                 
-                print("Checking multiline comment for line", i, line, self._in_multiline_comment(i, begin, end))
                 # If this line is inside an open multiline comment, it's a comment.
                 if self._in_multiline_comment(i, begin, end):
                     return True
@@ -131,7 +130,6 @@ class ChangeLump(object):
         return False
 
     def _in_multiline_comment(self, i, begin_re, end_re):
-        print("Running _in_multiline_comment for line", i, self.lines[i])
         """Return True if line i is inside an unmatched multiline comment block."""
         try:
             # Check if begin and end delimiters are the same (symmetric like """)
@@ -139,7 +137,6 @@ class ChangeLump(object):
             begin_stripped = begin_re.strip('^$\\s')
             end_stripped = end_re.strip('^$\\s')
             symmetric = (begin_stripped == end_stripped)
-            print("  Symmetric delimiters?", symmetric, "b", begin_re, "e", end_re, "stripped b", begin_stripped, "e", end_stripped) 
             
             in_comment = False
             for idx in range(0, i + 1):
@@ -150,10 +147,8 @@ class ChangeLump(object):
                     # toggles the comment state: first one opens, second one closes, etc.
                     # Example: """comment""" means we enter on first """, exit on second
                     matches = re.findall(begin_re, s)
-                    print("  Found", len(matches), "symmetric delimiters in line", idx, s)  
                     for _ in matches:
                         in_comment = not in_comment  # Flip True->False or False->True
-                    print("  Checking symmetricline", idx, s, "in_comment now", in_comment)
                 else:
                     # For asymmetric delimiters, track depth
                     begins = len(re.findall(begin_re, s))
@@ -165,7 +160,6 @@ class ChangeLump(object):
                     if in_comment and ends > 0:
                         in_comment = False
                     
-                    print("  Checking line", idx, s, "begins", begins, "ends", ends, "in_comment now", in_comment)
             
             return in_comment
         except Exception as Err:
