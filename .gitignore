@@ -23,7 +23,6 @@ ENV/
 
 # Exclude output files
 output/
-*.md
 
 # Exclude OS files
 .DS_Store

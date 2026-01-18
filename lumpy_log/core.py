@@ -8,6 +8,7 @@ import pathspec
 from pydriller import Repository
 from .changelump import ChangeLump
 from .languages import Languages
+from .test_processor import TestProcessor
 
 def _get_template_path(filename):
     """Get the absolute path to a template file"""
@@ -71,6 +72,8 @@ def main(args):
             "branch",
             "repo",
             "obsidian_index",
+            "command",
+            "input",
             "HCTI_API_USER_ID",
             "HCTI_API_KEY",
         ]:
@@ -78,8 +81,13 @@ def main(args):
                 kwargs[param] = args[param]
 
     # Only create the output directory when not a dry run
-    if not args.get('dryrun') and not exists(args['outputfolder']):
-        os.makedirs(args['outputfolder'])
+    if not args.get('dryrun'):
+        if not exists(args['outputfolder']):
+            os.makedirs(args['outputfolder'])
+        # Create commits subdirectory
+        commits_dir = os.path.join(args['outputfolder'], 'commits')
+        if not exists(commits_dir):
+            os.makedirs(commits_dir)
 
     commits = []
 
@@ -95,7 +103,8 @@ def main(args):
             or (args["branch"] in commit.branches) 
         )):
             genfilename = commit.author_date.strftime("%Y%m%d_%H%M")+"_"+commit.hash[:7]
-            genfilepath = os.path.join(args['outputfolder'], genfilename+".md")
+            commits_dir = os.path.join(args['outputfolder'], 'commits')
+            genfilepath = os.path.join(commits_dir, genfilename+".md")
             
             if(args["force"] or not os.path.exists(genfilepath)):
                 if(args["verbose"]):
@@ -193,21 +202,9 @@ def main(args):
                         #file1.write("\n\n".join(newcommit["markdown"]))
                         file1.write(newcommit["markdown"])
     
-        # Generate Obsidian index file if requested
-        if not args["dryrun"] and args.get("obsidian_index", True):
-            from datetime import datetime
-            index_path = os.path.join(args['outputfolder'], "index.md")
-            index_content = tObsidianIndex.render({
-                "generation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "repo_path": args['repo'],
-                "total_commits": len(commits),
-                "commits": sorted(commits, key=lambda x: x['author_date'], reverse=True)
-            })
-        
-            with open(index_path, "w") as f:
-                f.write(index_content)
-        
-            if args["verbose"]:
-                print(f"Generated Obsidian index: {index_path}")
+    # Rebuild index after processing commits
+    if not args["dryrun"] and args.get("obsidian_index", True):
+        processor = TestProcessor(args['outputfolder'])
+        processor._rebuild_index(verbose=args.get("verbose", False))
 
     
