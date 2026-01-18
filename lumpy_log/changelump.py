@@ -8,6 +8,11 @@ class ChangeLump(object):
         self.multiLineStart = None
         self.multiLine = False
         self.source = None
+
+        if len(lines) == 0:
+            self.start = 0
+            self.end = 0
+            return
         
         if func is not None:
             self.source = "Function" 
@@ -20,13 +25,16 @@ class ChangeLump(object):
             else:
                 self.source = "Line Changed" 
                 self.start = max(0, start - 1)
-
+                
             if(end is None):
                 self.end = self.start
             else:
                 self.end = max(0, self.start, end - 1)
 
-        if False and self.verbose:
+        self.start = min(self.start, len(self.lines)-1) 
+        self.end = min(self.end, len(self.lines)-1)
+
+        if self.verbose:
             print("ChangeLump", "self.start", self.start,"len(self.lines)", len(self.lines))
         
     def extendOverText(self):
@@ -43,7 +51,7 @@ class ChangeLump(object):
             self.end = k
             k += 1
         
-        if False and self.verbose:
+        if self.verbose:
             print("extendOverText", "self.start", self.start,"j", j, "self.end",self.end,"k",k, "len(self.lines)",len(self.lines))
         
         
@@ -66,7 +74,7 @@ class ChangeLump(object):
     @property
     def code(self):    
         start = self.start 
-        if(self.commentStart):
+        if(self.commentStart is not None):
             start = self.commentStart     
 
         #code = ""self.source+"\n"+
@@ -83,10 +91,10 @@ class ChangeLump(object):
 
     # Abstracts out lineIsComment so we can  print the results
     def _lineIsComment(self, i):
-        firstLine = (i == self.start - 1 )
+        firstLine = (i == self.start )
         line = self.lines[i].strip()
 
-        if(False and self.verbose):
+        if(self.verbose):
             print(self.lang.name, "self.lang.comment_structure",self.lang.comment_structure)
         comment_structure = self.lang.comment_structure
 
@@ -123,4 +131,4 @@ class ChangeLump(object):
                 print(self.lang.comment_family, comment_structure["single"])
             
         return False
-        
+
