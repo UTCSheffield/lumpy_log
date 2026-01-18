@@ -270,7 +270,7 @@ class TestChangeLumpAdvancedFeatures:
             "name": "get_user_name"
         }
         
-        lump = ChangeLump(python_language, complex_python_code, func=func_dict, verbose=True)
+        lump = ChangeLump(python_language, complex_python_code, func=func_dict)
         lump.extendOverComments()
         code = lump.code
         
@@ -286,7 +286,7 @@ class TestChangeLumpAdvancedFeatures:
     def test_multi_line_docstring_detection(self, python_language, complex_python_code):
         """Test detection of multi-line docstrings as comments"""
         # Test a line within the multi-line docstring
-        lump = ChangeLump(python_language, complex_python_code, start=6, end=6, verbose=True)
+        lump = ChangeLump(python_language, complex_python_code, start=6, end=6)
         
         lump.debug = True
 
@@ -299,7 +299,7 @@ class TestChangeLumpAdvancedFeatures:
     
     def test_single_line_comment_detection(self, python_language, complex_python_code):
         """Test detection of single-line comments"""
-        lump = ChangeLump(python_language, complex_python_code, start=10, end=11, verbose=True)
+        lump = ChangeLump(python_language, complex_python_code, start=10, end=11)
         
         # Line 9 (index 9) is "# Configuration constant"
         is_comment = lump.lineIsComment(9)
@@ -311,7 +311,7 @@ class TestChangeLumpAdvancedFeatures:
         # Simulate a change on line 22 (print('Starting application'))
         changed_line = 22  # 1-indexed
         
-        lump = ChangeLump(python_language, complex_python_code, start=changed_line, verbose=True)
+        lump = ChangeLump(python_language, complex_python_code, start=changed_line)
         
         # Initial state: just the changed line
         assert lump.start == 21  # 0-indexed
@@ -335,7 +335,7 @@ class TestChangeLumpAdvancedFeatures:
     def test_standalone_code_stops_at_blank_lines(self, python_language, complex_python_code):
         """Test that extendOverText stops at blank lines (natural boundaries)"""
         # Change on the constant line (line 11)
-        lump = ChangeLump(python_language, complex_python_code, start=11, verbose=True)
+        lump = ChangeLump(python_language, complex_python_code, start=11)
         lump.extendOverText()
         
         code = lump.code
@@ -356,7 +356,7 @@ class TestChangeLumpAdvancedFeatures:
             "name": "get_user_name"
         }
         
-        lump = ChangeLump(python_language, complex_python_code, func=func_dict, verbose=True)
+        lump = ChangeLump(python_language, complex_python_code, func=func_dict)
         lump.extendOverComments()
         
         # extendOverComments should stop at decorators (they're not comments)
@@ -383,7 +383,7 @@ class TestChangeLumpAdvancedFeatures:
             "name": "my_function"
         }
         
-        lump = ChangeLump(python_language, code_with_multiple_comments, func=func_dict, verbose=True)
+        lump = ChangeLump(python_language, code_with_multiple_comments, func=func_dict)
         lump.extendOverComments()
         
         code = lump.code
