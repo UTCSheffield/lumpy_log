@@ -158,10 +158,7 @@ class TestChangeLumpExtend:
         func_dict = {"start_line": 2, "end_line": 3, "name": "my_func"}
         
         lump = ChangeLump(python_language, code, func=func_dict)
-        lump.verbose = True
-        print(lump.code)
         lump.extendOverComments()
-        print(lump.code)
         
         assert lump.commentStart == 0
         assert "# This is important" in lump.code
@@ -326,6 +323,7 @@ class TestChangeLumpAdvancedFeatures:
         code = lump.code
         
         # Should include context around the change
+        assert "    # This is where execution starts" in code
         assert "if __name__ == '__main__':" in code
         assert "print('Starting application')" in code
         assert "user = get_user_name()" in code
