@@ -8,6 +8,7 @@ import pathspec
 from pydriller import Repository
 from .changelump import ChangeLump
 from .languages import Languages
+from .test_processor import TestProcessor
 
 def _get_template_path(filename):
     """Get the absolute path to a template file"""
@@ -201,31 +202,9 @@ def main(args):
                         #file1.write("\n\n".join(newcommit["markdown"]))
                         file1.write(newcommit["markdown"])
     
-        # Generate Obsidian index file if requested
-        if not args["dryrun"] and args.get("obsidian_index", True):
-            from datetime import datetime
-            from pathlib import Path
-            
-            # Collect test result files
-            tests_dir = Path(args['outputfolder']) / 'tests'
-            test_files = []
-            if tests_dir.exists():
-                test_files = sorted(tests_dir.glob("*.md"), reverse=True)
-            
-            index_path = os.path.join(args['outputfolder'], "index.md")
-            index_content = tObsidianIndex.render({
-                "generation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "repo_path": args['repo'],
-                "total_commits": len(commits),
-                "commits": sorted(commits, key=lambda x: x['author_date'], reverse=True),
-                "test_files": [f.name for f in test_files],
-                "total_tests": len(test_files)
-            })
-        
-            with open(index_path, "w") as f:
-                f.write(index_content)
-        
-            if args["verbose"]:
-                print(f"Generated Obsidian index: {index_path}")
+    # Rebuild index after processing commits
+    if not args["dryrun"] and args.get("obsidian_index", True):
+        processor = TestProcessor(args['outputfolder'])
+        processor._rebuild_index(verbose=args.get("verbose", False))
 
     
