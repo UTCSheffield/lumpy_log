@@ -29,7 +29,7 @@ class ChangeLump(object):
             if(end is None):
                 self.end = self.start
             else:
-                self.end = max(0, self.start, end - 1)
+                self.end = max(self.start, end - 1)
 
         self.start = min(self.start, len(self.lines)-1) 
         self.end = min(self.end, len(self.lines)-1)
@@ -91,44 +91,85 @@ class ChangeLump(object):
 
     # Abstracts out lineIsComment so we can  print the results
     def _lineIsComment(self, i):
-        firstLine = (i == self.start )
-        line = self.lines[i].strip()
-
+        line = self.lines[i]
         if(self.verbose):
             print(self.lang.name, "self.lang.comment_structure",self.lang.comment_structure)
         comment_structure = self.lang.comment_structure
 
-        if (comment_structure["begin"] ):
+        begin = comment_structure.get("begin")
+        end = comment_structure.get("end")
+        single = comment_structure.get("single")
+
+        # Multiline comments: treat lines with both begin and end as comment,
+        # and any line inside unmatched begin/end pairs as comment.
+        if begin:
             try:
-                beginmatches = re.findall(comment_structure["begin"],line)
-                endmatches = re.findall( comment_structure["end"],line)
-            
-                if (firstLine and len(beginmatches) and len(beginmatches) == len(endmatches)): #both on same line
-                    return True
+                beginmatches = re.findall(begin, line)
+                endmatches = re.findall(end, line)
 
-                if(self.multiLine and self.multiLineStart is None):
-                    if (len(beginmatches)):
-                        self.multiLineStart = i
-                        return True
+                # If both markers appear on the same line, it's a comment line.
+                if len(beginmatches) and len(endmatches):
                     return True
-
-                if(firstLine and len(endmatches)):
-                    self.multiLine = True
+                
+                print("Checking multiline comment for line", i, line, self._in_multiline_comment(i, begin, end))
+                # If this line is inside an open multiline comment, it's a comment.
+                if self._in_multiline_comment(i, begin, end):
                     return True
             except Exception as Err:
                 print(type(Err), Err)
                 print(self.lang.comment_family, comment_structure)
 
-        if(len(line) == 0):
-            return False
-        
-        if (comment_structure["single"]):
+        # Single-line comments
+        if single:
             try:
-                singlematches = re.findall( comment_structure["single"], line)
-                return len(singlematches)>0
+                if re.search(single, line.strip()):
+                    return True
             except Exception as Err:
                 print("Single", type(Err), Err)
                 print(self.lang.comment_family, comment_structure["single"])
-            
+
         return False
+
+    def _in_multiline_comment(self, i, begin_re, end_re):
+        print("Running _in_multiline_comment for line", i, self.lines[i])
+        """Return True if line i is inside an unmatched multiline comment block."""
+        try:
+            # Check if begin and end delimiters are the same (symmetric like """)
+            # Strip common regex anchors to compare the actual delimiter strings
+            begin_stripped = begin_re.strip('^$\\s')
+            end_stripped = end_re.strip('^$\\s')
+            symmetric = (begin_stripped == end_stripped)
+            print("  Symmetric delimiters?", symmetric, "b", begin_re, "e", end_re, "stripped b", begin_stripped, "e", end_stripped) 
+            
+            in_comment = False
+            for idx in range(0, i + 1):
+                s = self.lines[idx]
+                
+                if symmetric:
+                    # For symmetric delimiters (like """ in Python), each occurrence
+                    # toggles the comment state: first one opens, second one closes, etc.
+                    # Example: """comment""" means we enter on first """, exit on second
+                    matches = re.findall(begin_re, s)
+                    print("  Found", len(matches), "symmetric delimiters in line", idx, s)  
+                    for _ in matches:
+                        in_comment = not in_comment  # Flip True->False or False->True
+                    print("  Checking symmetricline", idx, s, "in_comment now", in_comment)
+                else:
+                    # For asymmetric delimiters, track depth
+                    begins = len(re.findall(begin_re, s))
+                    ends = len(re.findall(end_re, s))
+                    
+                    # Process begins first, then ends
+                    if not in_comment and begins > 0:
+                        in_comment = True
+                    if in_comment and ends > 0:
+                        in_comment = False
+                    
+                    print("  Checking line", idx, s, "begins", begins, "ends", ends, "in_comment now", in_comment)
+            
+            return in_comment
+        except Exception as Err:
+            if self.verbose:
+                print("_in_multiline_comment error", type(Err), Err)
+            return False
 

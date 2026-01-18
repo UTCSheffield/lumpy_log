@@ -283,20 +283,22 @@ class TestChangeLumpAdvancedFeatures:
         
         # TODO: Issue #18 - decorators are NOT currently captured
         # These assertions will fail until decorators are implemented
-        # assert "@property" in code
-        # assert "@cache" in code
+        assert "@property" in code
+        assert "@cache" in code
     
     def test_multi_line_docstring_detection(self, python_language, complex_python_code):
         """Test detection of multi-line docstrings as comments"""
         # Test a line within the multi-line docstring
         lump = ChangeLump(python_language, complex_python_code, start=6, end=6, verbose=True)
         
-        # Line 5 (index 5) is inside the docstring
+        lump.debug = True
+
+        # Line 6 (index 5) is inside the docstring
         is_comment = lump.lineIsComment(5)
         
         # This should detect multi-line comment (depends on language config)
         # Note: Current implementation may not handle """ correctly
-        # assert is_comment == True
+        assert is_comment == True
     
     def test_single_line_comment_detection(self, python_language, complex_python_code):
         """Test detection of single-line comments"""
