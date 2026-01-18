@@ -71,6 +71,8 @@ def main(args):
             "branch",
             "repo",
             "obsidian_index",
+            "command",
+            "input",
             "HCTI_API_USER_ID",
             "HCTI_API_KEY",
         ]:
@@ -78,8 +80,13 @@ def main(args):
                 kwargs[param] = args[param]
 
     # Only create the output directory when not a dry run
-    if not args.get('dryrun') and not exists(args['outputfolder']):
-        os.makedirs(args['outputfolder'])
+    if not args.get('dryrun'):
+        if not exists(args['outputfolder']):
+            os.makedirs(args['outputfolder'])
+        # Create commits subdirectory
+        commits_dir = os.path.join(args['outputfolder'], 'commits')
+        if not exists(commits_dir):
+            os.makedirs(commits_dir)
 
     commits = []
 
@@ -95,7 +102,8 @@ def main(args):
             or (args["branch"] in commit.branches) 
         )):
             genfilename = commit.author_date.strftime("%Y%m%d_%H%M")+"_"+commit.hash[:7]
-            genfilepath = os.path.join(args['outputfolder'], genfilename+".md")
+            commits_dir = os.path.join(args['outputfolder'], 'commits')
+            genfilepath = os.path.join(commits_dir, genfilename+".md")
             
             if(args["force"] or not os.path.exists(genfilepath)):
                 if(args["verbose"]):
@@ -196,12 +204,22 @@ def main(args):
         # Generate Obsidian index file if requested
         if not args["dryrun"] and args.get("obsidian_index", True):
             from datetime import datetime
+            from pathlib import Path
+            
+            # Collect test result files
+            tests_dir = Path(args['outputfolder']) / 'tests'
+            test_files = []
+            if tests_dir.exists():
+                test_files = sorted(tests_dir.glob("*.md"), reverse=True)
+            
             index_path = os.path.join(args['outputfolder'], "index.md")
             index_content = tObsidianIndex.render({
                 "generation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "repo_path": args['repo'],
                 "total_commits": len(commits),
-                "commits": sorted(commits, key=lambda x: x['author_date'], reverse=True)
+                "commits": sorted(commits, key=lambda x: x['author_date'], reverse=True),
+                "test_files": [f.name for f in test_files],
+                "total_tests": len(test_files)
             })
         
             with open(index_path, "w") as f:
