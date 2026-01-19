@@ -22,14 +22,15 @@ class list1(UserList):
 
     def _convert_index_output(self, index):
         """Convert 0-indexed internal index to 1-indexed for output."""
+        # No conversion for negative indices as they refer to positions from the end
         return index + 1
 
     def __getitem__(self, key):
         """Get item by 1-indexed position."""
         if isinstance(key, slice):
             # Convert slice bounds from 1-indexed to 0-indexed
-            start = self._convert_index_input(key.start) if key.start is not None else None
-            stop = self._convert_index_input(key.stop) if key.stop is not None else None
+            start = self._convert_index_input(key.start)
+            stop = self._convert_index_input(key.stop)
             step = key.step
             converted_slice = slice(start, stop, step)
             return self.__class__(super().__getitem__(converted_slice))
@@ -41,8 +42,8 @@ class list1(UserList):
         """Set item by 1-indexed position."""
         if isinstance(key, slice):
             # Convert slice bounds from 1-indexed to 0-indexed
-            start = self._convert_index_input(key.start) if key.start is not None else None
-            stop = self._convert_index_input(key.stop) if key.stop is not None else None
+            start = self._convert_index_input(key.start)
+            stop = self._convert_index_input(key.stop)
             step = key.step
             converted_slice = slice(start, stop, step)
             super().__setitem__(converted_slice, value)
@@ -54,8 +55,8 @@ class list1(UserList):
         """Delete item by 1-indexed position."""
         if isinstance(key, slice):
             # Convert slice bounds from 1-indexed to 0-indexed
-            start = self._convert_index_input(key.start) if key.start is not None else None
-            stop = self._convert_index_input(key.stop) if key.stop is not None else None
+            start = self._convert_index_input(key.start)
+            stop = self._convert_index_input(key.stop)
             step = key.step
             converted_slice = slice(start, stop, step)
             super().__delitem__(converted_slice)
