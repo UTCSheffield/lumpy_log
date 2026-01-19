@@ -1,62 +1,75 @@
 import re
+from lumpy_log.list1 import list1
+
 class ChangeLump(object):
     def __init__(self, lang, lines, start=None, end=None, func=None, verbose=False):
         self.verbose = verbose
         self.lang = lang
-        self.lines = lines
+        self.lines = list1(lines)
         self.commentStart = None
         self.multiLineStart = None
         self.multiLine = False
         self.source = None
 
         if len(lines) == 0:
-            self.start = 0
-            self.end = 0
+            self.start = None
+            self.end = None
             return
         
+        if (start is not None and end is not None and (start < 1 or end > len(lines))):
+            self.start = None
+            self.end = None
+            return
+        
+
         if func is not None:
             self.source = "Function" 
             self.func = func
-            self.start = max(0, func["start_line"] - 1)
-            self.end = func["end_line"] - 1
+            # func line numbers are 1-indexed, store them directly
+            self.start = func["start_line"]
+            self.end = func["end_line"]
         else:
             if(start is None):
-                self.start = 0
+                self.start = 1  # 1-indexed: first line
             else:
                 self.source = "Line Changed" 
-                self.start = max(0, start - 1)
+                self.start = start
                 
             if(end is None):
                 self.end = self.start
             else:
-                self.end = max(self.start, end - 1)
+                self.end = max(self.start, end)
 
-        self.start = min(self.start, len(self.lines)-1) 
-        self.end = min(self.end, len(self.lines)-1)
+        # Clamp to valid 1-indexed range [1, len(lines)]
+        if self.start is not None:
+            self.start = max(1, min(self.start, len(self.lines)))
+        if self.end is not None:
+            self.end = max(1, min(self.end, len(self.lines)))
 
         if self.verbose:
-            print("ChangeLump", "self.start", self.start,"len(self.lines)", len(self.lines))
+            print("ChangeLump", "self.start", self.start, "self.end", self.end, "len(self.lines)", len(self.lines))
         
     def extendOverText(self):
-        j = self.start-1
+        j = self.start - 1  # Go to previous line (in 1-indexed terms)
         try:
-            while( j >= 0 and len(self.lines[j].strip())):
+            while( j >= 1 and len(self.lines[j].strip())):
                 self.start = j
                 j -= 1
         except Exception as e:
             print("extendOverText", type(e), e, "j", j, "len(self.lines)", len(self.lines))
         
-        k = self.end
-        while( k < len(self.lines) and len(self.lines[k].strip())):
+        k = self.end + 1  # Go to next line (in 1-indexed terms)
+        while( k <= len(self.lines) and len(self.lines[k].strip())):
             self.end = k
             k += 1
         
         if self.verbose:
-            print("extendOverText", "self.start", self.start,"j", j, "self.end",self.end,"k",k, "len(self.lines)",len(self.lines))
+            print("extendOverText", "self.start", self.start, "j", j, "self.end", self.end, "k", k, "len(self.lines)", len(self.lines))
         
         
-    def inLump(self,i):
-        inLump = (self.start <= i and i <= self.end)
+    def inLump(self, i):
+        """Check if 1-indexed line i is within the lump bounds."""
+        inLump = (self.start is not None and self.end is not None and self.start <= i and i <= self.end)
     
         if self.verbose:
             print("inLump", "self.start", self.start,"i", i, "inLump",inLump)
@@ -65,20 +78,24 @@ class ChangeLump(object):
     def extendOverComments(self):
         if self.verbose:
             print("extendOverComments", "self.start", self.start)
-        j = self.start
-        while(j > 0 and self.lineIsComment(j-1)):
+        j = self.start - 1  # Go to previous line (in 1-indexed terms)
+        while(j >= 1 and self.lineIsComment(j)):
             j -= 1
-            self.commentStart = j
+            self.commentStart = j + 1  # Store as 1-indexed
             
             
     @property
     def code(self):    
+        if self.start is None or self.end is None:
+            return ""
+        
         start = self.start 
         if(self.commentStart is not None):
             start = self.commentStart     
 
         #code = ""self.source+"\n"+
-        code = ("\n".join(self.lines[start: self.end+1]))
+        # Use 1-indexed slicing with list1: [start:end+1] includes lines from start to end inclusive
+        code = ("\n".join(self.lines[start:self.end+1]))
         if self.verbose:
             print("code", code)
         return code
