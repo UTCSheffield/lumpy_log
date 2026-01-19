@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-from ast import Str
 import yaml
 
 class Languages(object):
