@@ -19,13 +19,13 @@ pip install lumpy-log
 lumpy-log log
 
 # Process specific repository
-lumpy-log log -i /path/to/repo -o output
+lumpy-log log -i /path/to/repo -o devlog
 
 # With options
-lumpy-log log -i /path/to/repo -o output --verbose --force
+lumpy-log log -i /path/to/repo -o devlog --verbose --force
 
 # Backwards compatible (defaults to log command)
-lumpy-log -i /path/to/repo -o output
+lumpy-log -i /path/to/repo -o devlog
 ```
 
 ### Test Results
@@ -62,7 +62,7 @@ python -m lumpy_log -i /path/to/repo -o output
 ### Log Command (Git Commits)
 
 - `-i, --repo`: Path to the local Git repository (default: current directory)
-- `-o, --outputfolder`: Output folder for generated files (default: output)
+- `-o, --outputfolder`: Output folder for generated files (default: devlog)
 - `-f, --fromcommit`: Start from this commit
 - `-t, --tocommit`: End at this commit
 - `-a, --allbranches`: Include all branches
@@ -74,14 +74,14 @@ python -m lumpy_log -i /path/to/repo -o output
 
 ### Test Command
 
-- `-o, --outputfolder`: Output folder for test results (default: output)
+- `-o, --outputfolder`: Output folder for test results (default: devlog)
 - `--input`: Input file with test output (reads from stdin if not specified)
 - `-v, --verbose`: Verbose output
 - `--raw-output`: Include raw test output in the report
 
 ### Rebuild Command
 
-- `-o, --outputfolder`: Output folder containing commits/ and tests/ (default: output)
+- `-o, --outputfolder`: Output folder containing commits/ and tests/ (default: devlog)
 - `-v, --verbose`: Verbose output
 - `--changelog`: Use changelog order (newest first) instead of default (oldest first)
 

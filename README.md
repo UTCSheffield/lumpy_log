@@ -46,13 +46,13 @@ After installation, you can use the `lumpy-log` command:
 lumpy-log log
 
 # Process a specific repository
-lumpy-log log -i /path/to/repo -o /path/to/output
+lumpy-log log -i /path/to/repo
 
 # Process with options
-lumpy-log log -i /path/to/repo -o output --verbose --force
+lumpy-log log -i /path/to/repo -o devlog --verbose --force
 
 # Backwards compatible (defaults to log command)
-lumpy-log -i /path/to/repo -o output
+lumpy-log -i /path/to/repo
 ```
 
 #### Process Test Results
@@ -117,7 +117,7 @@ python -m lumpy_log -i /path/to/repo -o output
 #### Log Command (Git Commits)
 
 - `-i, --repo`: Path to the local Git repository (default: current directory)
-- `-o, --outputfolder`: Output folder for generated files (default: output)
+- `-o, --outputfolder`: Output folder for generated files (default: devlog)
 - `-f, --fromcommit`: Start from this commit
 - `-t, --tocommit`: End at this commit
 - `-a, --allbranches`: Include all branches
@@ -129,7 +129,7 @@ python -m lumpy_log -i /path/to/repo -o output
 
 #### Test Command (Test Results)
 
-- `-o, --outputfolder`: Output folder for test results (default: output)
+- `-o, --outputfolder`: Output folder for test results (default: devlog)
 - `--input`: Input file with test output (if not specified, reads from stdin)
 - `-v, --verbose`: Verbose output
 - `--raw-output`: Include raw test output in the report
@@ -149,7 +149,7 @@ lumpy-log rebuild --changelog
 lumpy-log rebuild -o /path/to/output
 ```
 
-- `-o, --outputfolder`: Output folder containing commits/ and tests/ (default: output)
+- `-o, --outputfolder`: Output folder containing commits/ and tests/ (default: devlog)
 - `-v, --verbose`: Verbose output
 - `--changelog`: Use changelog order (newest first) instead of default (oldest first)
 
@@ -158,7 +158,7 @@ lumpy-log rebuild -o /path/to/output
 Lumpy Log organizes output into subdirectories:
 
 ```
-output/
+devlog/
 ├── index.md              # Unified index with commits and test results
 ├── commits/              # Git commit markdown files
 │   ├── 20260118_1430_abc1234.md

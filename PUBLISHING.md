@@ -44,7 +44,7 @@ This guide walks you through publishing `lumpy-log` to PyPI.
 
 2. **Test installation from Test PyPI**:
    ```bash
-   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ lumpy-log
+   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ lumpy-log --no-cache-dir
    ```
 
 3. **Verify it works**:

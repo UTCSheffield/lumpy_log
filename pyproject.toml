@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lumpy-log"
-version = "0.1.0"
+version = "0.1.2"
 description = "Make git logs easier for use in scenarios when communicating the progress of a project to non-experts"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -26,7 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "pydriller",
+    "pydriller>=2.0",
     "pygments",
     "jinja2",
     "pyyaml",
@@ -45,4 +45,4 @@ where = ["."]
 include = ["lumpy_log*"]
 
 [tool.setuptools.package-data]
-lumpy_log = ["templates/*.hbs", "templates/*.j2", "languages.yml"]
+lumpy_log = ["templates/*.md", "languages.yml"]

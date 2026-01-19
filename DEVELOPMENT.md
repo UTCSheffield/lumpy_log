@@ -65,10 +65,10 @@ lumpy_log/
 ### Git commit logs:
 ```bash
 # Using the log command
-lumpy-log log -i /path/to/repo -o output
+lumpy-log log -i /path/to/repo -o devlog
 
 # Backwards compatible (defaults to log)
-lumpy-log -i /path/to/repo -o output
+lumpy-log -i /path/to/repo -o devlog
 ```
 
 ### Test results:
@@ -100,7 +100,7 @@ from lumpy_log.core import main
 
 args = {
     'repo': '/path/to/repo',
-    'outputfolder': 'output',
+    'outputfolder': 'devlog',
     'verbose': True,
     'dryrun': False,
     'force': False,
@@ -130,12 +130,12 @@ main(args)
 
 2. **Quick functional test**:
    ```bash
-   lumpy-log log -i . -o test_output --dryrun --verbose
+   lumpy-log log -i . -o test_devlog --dryrun --verbose
    ```
 
 3. **Full test with this repository**:
    ```bash
-   lumpy-log log -i . -o test_output --verbose --force
+   lumpy-log log -i . -o test_devlog --verbose --force
    ```
 
 4. **Run the test script**:

@@ -7,14 +7,14 @@ from .test_processor import main as test_main, TestProcessor
 
 def rebuild_main(args):
     """Rebuild index from existing commits and test results"""
-    processor = TestProcessor(args.get('outputfolder', 'output'))
+    processor = TestProcessor(args.get('outputfolder', 'devlog'))
     try:
         processor._rebuild_index(
             verbose=args.get('verbose', False),
             changelog_order=args.get('changelog', False)
         )
         if not args.get('verbose'):
-            print(f"Index rebuilt: {args.get('outputfolder', 'output')}/index.md")
+            print(f"Index rebuilt: {args.get('outputfolder', 'devlog')}/index.md")
         return 0
     except Exception as e:
         print(f"Error rebuilding index: {e}", file=sys.stderr)
@@ -43,8 +43,8 @@ def main():
     )
     log_parser.add_argument(
         "-o", "--outputfolder",
-        default="output",
-        help="Output folder for generated files (default: output)"
+        default="devlog",
+        help="Output folder for generated files (default: devlog)"
     )
     log_parser.add_argument(
         "-f", "--fromcommit",
@@ -111,8 +111,8 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
     )
     test_parser.add_argument(
         "-o", "--outputfolder",
-        default="output",
-        help="Output folder for test results (default: output)"
+        default="devlog",
+        help="Output folder for test results (default: devlog)"
     )
     test_parser.add_argument(
         "--input",
@@ -137,8 +137,8 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
     )
     rebuild_parser.add_argument(
         "-o", "--outputfolder",
-        default="output",
-        help="Output folder containing commits/ and tests/ (default: output)"
+        default="devlog",
+        help="Output folder containing commits/ and tests/ (default: devlog)"
     )
     rebuild_parser.add_argument(
         "-v", "--verbose",
@@ -165,7 +165,7 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
         default_args = {
             'command': 'log',
             'repo': '.',
-            'outputfolder': 'output',
+            'outputfolder': 'devlog',
             'from_commit': None,
             'to_commit': None,
             'allbranches': False,
