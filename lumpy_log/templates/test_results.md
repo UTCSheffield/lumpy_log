@@ -21,15 +21,11 @@
 **Raw output captured** ({{ summary }})
 {% endif %}
 
----
-
 {% if raw_output %}
 ## Raw Output
 
 ```
 {{ raw_output }}
 ```
-
----
 
 {% endif %}
