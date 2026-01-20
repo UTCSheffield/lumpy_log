@@ -22,7 +22,7 @@ ENV/
 *~
 
 # Exclude output files
-output/
+devlog/
 
 # Exclude OS files
 .DS_Store

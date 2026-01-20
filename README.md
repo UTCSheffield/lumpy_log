@@ -184,26 +184,166 @@ dist/
 *.tmp
 ```
 
-
-## Building for PyPI
-
-```bash
-# Install build tools
-pip install build twine
-
-# Build the package
-python -m build
-
-# Upload to PyPI (requires credentials)
-twine upload dist/*
-```
-
-# Lumpy Log
-
-## Running Tests
+### Running Tests
 
 To run the tests, use the following command:
 
 ```bash
 pytest
 ```
+
+
+# Example Output
+
+## Commit : Refactor verbose logging conditions in ChangeLump methods for clarity
+
+By "Mr Eggleton" on 2026-01-18
+
+
+### "changelump.py" was Modified
+
+
+
+```python
+    # Abstracts out lineIsComment so we can  print the results
+    def _lineIsComment(self, i):
+        line = self.lines[i]
+        if(self.verbose):
+            print(self.lang.name, "self.lang.comment_structure",self.lang.comment_structure)
+        comment_structure = self.lang.comment_structure
+
+        begin = comment_structure.get("begin")
+        end = comment_structure.get("end")
+        single = comment_structure.get("single")
+
+        # Multiline comments: treat lines with both begin and end as comment,
+        # and any line inside unmatched begin/end pairs as comment.
+        if begin:
+            try:
+                beginmatches = re.findall(begin, line)
+                endmatches = re.findall(end, line)
+
+                # If both markers appear on the same line, it's a comment line.
+                if len(beginmatches) and len(endmatches):
+                    return True
+                
+                # If this line is inside an open multiline comment, it's a comment.
+                if self._in_multiline_comment(i, begin, end):
+                    return True
+            except Exception as Err:
+                print(type(Err), Err)
+                print(self.lang.comment_family, comment_structure)
+
+        # Single-line comments
+        if single:
+            try:
+                if re.search(single, line.strip()):
+                    return True
+            except Exception as Err:
+                print("Single", type(Err), Err)
+                print(self.lang.comment_family, comment_structure["single"])
+
+        return False
+
+```
+
+
+
+```python
+    @property
+    def code(self):    
+        start = self.start 
+        if(self.commentStart is not None):
+            start = self.commentStart     
+
+        #code = ""self.source+"\n"+
+        code = ("\n".join(self.lines[start: self.end+1]))
+        if self.verbose:
+            print("code", code)
+        return code
+```
+
+
+
+```python
+    def extendOverComments(self):
+        if self.verbose:
+            print("extendOverComments", "self.start", self.start)
+        j = self.start
+        while(j > 0 and self.lineIsComment(j-1)):
+            j -= 1
+            self.commentStart = j
+```
+
+
+
+```python
+    def lineIsComment(self, i):
+        blineIsComment = self._lineIsComment(i)
+        if self.verbose:
+            print("lineIsComment", blineIsComment, self.lines[i])
+        return blineIsComment
+```
+
+
+
+```python
+    def inLump(self,i):
+        inLump = (self.start <= i and i <= self.end)
+    
+        if self.verbose:
+            print("inLump", "self.start", self.start,"i", i, "inLump",inLump)
+        return inLump
+```
+
+
+
+```python
+        """Return True if line i is inside an unmatched multiline comment block."""
+        try:
+            # Check if begin and end delimiters are the same (symmetric like """)
+            # Strip common regex anchors to compare the actual delimiter strings
+            begin_stripped = begin_re.strip('^$\\s')
+            end_stripped = end_re.strip('^$\\s')
+            symmetric = (begin_stripped == end_stripped)
+            
+            in_comment = False
+            for idx in range(0, i + 1):
+                s = self.lines[idx]
+                
+                if symmetric:
+                    # For symmetric delimiters (like """ in Python), each occurrence
+                    # toggles the comment state: first one opens, second one closes, etc.
+                    # Example: """comment""" means we enter on first """, exit on second
+                    matches = re.findall(begin_re, s)
+                    for _ in matches:
+                        in_comment = not in_comment  # Flip True->False or False->True
+                else:
+                    # For asymmetric delimiters, track depth
+                    begins = len(re.findall(begin_re, s))
+                    ends = len(re.findall(end_re, s))
+                    
+                    # Process begins first, then ends
+                    if not in_comment and begins > 0:
+                        in_comment = True
+                    if in_comment and ends > 0:
+                        in_comment = False
+                    
+            
+            return in_comment
+        except Exception as Err:
+            if self.verbose:
+                print("_in_multiline_comment error", type(Err), Err)
+            return False
+
+```
+
+## Test Results : 2026-01-20 13:30:12
+**Format:** tap
+
+
+- **Tests Run:** 113
+- **Passed:** 113 ✅
+- **Failed:** 0 
+- **Skipped:** 0 
+
