@@ -7,14 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from .tap_parser import parse_test_output
-
-
-def _get_templates_dir():
-    """Get the templates directory path"""
-    package_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(package_dir, "templates")
-
-
+from .utils import _clean_markdown, _get_templates_dir, _format_markdown
 class TestProcessor:
     """Process test output and generate markdown files"""
     
@@ -66,7 +59,13 @@ class TestProcessor:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         return f"{timestamp}.md"
     
-    def process_test_output(self, output: str, verbose: bool = False, raw_output: bool = False) -> Path:
+    def process_test_output(
+        self,
+        output: str,
+        verbose: bool = False,
+        raw_output: bool = False,
+        build_devlog: bool = False,
+    ) -> Path:
         """
         Process test output and generate markdown file
         
@@ -96,9 +95,9 @@ class TestProcessor:
         # Generate filename and save
         filename = self.generate_filename()
         filepath = self.tests_dir / filename
-        
+
         with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(markdown_content)
+            f.write(_format_markdown(markdown_content))
         
         if verbose:
             print(f"Test results saved to: {filepath}")
@@ -109,16 +108,25 @@ class TestProcessor:
                 print(f"  Skipped: {test_data['tests_skipped']}")
         
         # Rebuild index to include new test results
-        self._rebuild_index(verbose)
+        self._rebuild_index(verbose, build_devlog=build_devlog)
         
         return filepath
     
-    def _rebuild_index(self, verbose: bool = False, changelog_order: bool = False):
-        """Rebuild the unified index with commits and tests interleaved by time
-        
+    def _rebuild_index(
+        self,
+        verbose: bool = False,
+        changelog_order: bool = False,
+        build_devlog: bool = False,
+        write_index: bool = True,
+    ):
+        """Rebuild the unified index with commits and tests interleaved by time.
+
         Args:
             verbose: Print progress messages
             changelog_order: If True, sort newest first (changelog style). If False (default), oldest first
+            build_devlog: When True, also emit a combined devlog.md containing the full contents
+                of each commit and test entry in the chosen order.
+            write_index: When False, skip writing index.md (used when only devlog is requested).
         """
         # Collect commit files
         commits_dir = self.output_folder / "commits"
@@ -143,27 +151,60 @@ class TestProcessor:
         # If changelog_order=True: newest first
         items.sort(key=lambda x: x['filename'], reverse=changelog_order)
         
-        # Load index template
-        template = self.jinja_env.get_template("obsidian_index.md")
-        
-        # Render index
-        index_content = template.render({
-            "generation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "repo_path": ".",
-            "items": items,
-            "total_items": len(items),
-            "total_commits": len(commit_files),
-            "total_tests": len(test_files)
-        })
-        
-        # Write index
         index_path = self.output_folder / "index.md"
-        with open(index_path, 'w', encoding='utf-8') as f:
-            f.write(index_content)
+        if write_index:
+            template = self.jinja_env.get_template("obsidian_index.md")
+            index_content = _clean_markdown(template.render({
+                "generation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "repo_path": ".",
+                "items": items,
+                "total_items": len(items),
+                "total_commits": len(commit_files),
+                "total_tests": len(test_files)
+            }))
+
+            with open(index_path, 'w', encoding='utf-8') as f:
+                f.write(index_content)
+
+            if verbose:
+                print(f"Updated index: {index_path}")
+                print(f"Order: {'Changelog (newest first)' if changelog_order else 'Development log (oldest first)'}")
+        elif verbose:
+            print("Index generation skipped (obsidian index disabled)")
         
-        if verbose:
-            print(f"Updated index: {index_path}")
+        if build_devlog:
+            devlog_path = self.output_folder / "devlog.md"
+            header_lines = [
+                "# Devlog",
+                "",
+                datetime.now().strftime("Generated: %Y-%m-%d %H:%M:%S"),
+                f"Items: {len(items)} ({len(commit_files)} commits, {len(test_files)} tests)",
+                "",
+            ]
+
+            segments = []
+            for item in items:
+                entry_path = self.output_folder / item["path"]
+                try:
+                    entry_text = entry_path.read_text(encoding="utf-8").strip()
+                except FileNotFoundError:
+                    if verbose:
+                        print(f"Missing item skipped in devlog: {entry_path}")
+                    continue
+                segments.append(entry_text)
+
+            devlog_body = "\n\n".join(segments)
+            devlog_content_parts = header_lines.copy()
+            if devlog_body:
+                devlog_content_parts.append(devlog_body)
+            devlog_path.write_text(_clean_markdown("\n".join(devlog_content_parts)), encoding="utf-8")
+
+            if verbose:
+                print(f"Built devlog: {devlog_path}")
+
+        if verbose and not write_index:
             print(f"Order: {'Changelog (newest first)' if changelog_order else 'Development log (oldest first)'}")
+
 
 
 def main(args: dict) -> int:
@@ -185,7 +226,8 @@ def main(args: dict) -> int:
         filepath = processor.process_test_output(
             output, 
             verbose=args.get('verbose', False),
-            raw_output=raw_output
+            raw_output=raw_output,
+            build_devlog=args.get("devlog", False),
         )
         
         if not args.get('verbose'):

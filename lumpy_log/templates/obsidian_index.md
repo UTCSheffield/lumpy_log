@@ -8,10 +8,5 @@ Repository: {{ repo_path }}
 ---
 
 {% for item in items %}
-{% if item.type == 'commit' %}
 ![[{{ item.path }}]]
-{% elif item.type == 'test' %}
-![[{{ item.path }}]]
-{% endif %}
-
 {% endfor %}

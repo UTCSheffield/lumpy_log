@@ -2,27 +2,17 @@
 import yaml
 from jinja2 import Environment, FileSystemLoader
 from genericpath import exists
-from re import split
+from re import split, sub
 import sys, os
 import pathspec
 from pydriller import Repository
 from .changelump import ChangeLump
 from .languages import Languages
 from .test_processor import TestProcessor
-
-def _get_template_path(filename):
-    """Get the absolute path to a template file"""
-    package_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(package_dir, "templates", filename)
-
-def _get_templates_dir():
-    """Get the templates directory path"""
-    package_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(package_dir, "templates")
+from .utils import _get_templates_dir, _format_markdown
 
 languages = Languages(os.path.join(os.path.dirname(os.path.abspath(__file__)), "languages.yml"))
 
-# Set up Jinja2 environment
 jinja_env = Environment(loader=FileSystemLoader(_get_templates_dir()))
 tCommit = jinja_env.get_template("commit.md")
 tModifiedFiles = jinja_env.get_template("modified_files.md")
@@ -60,6 +50,7 @@ def _load_lumpy_ignore(repo_path: str):
 
     return pathspec.PathSpec.from_lines("gitwildmatch", patterns)
 
+
 def main(args):
     kwargs = {}
     for param in args.keys():
@@ -72,6 +63,8 @@ def main(args):
             "branch",
             "repo",
             "obsidian_index",
+            "single_file",
+            "devlog",
             "command",
             "input",
             "HCTI_API_USER_ID",
@@ -194,6 +187,8 @@ def main(args):
                             
                         newcommit["modifications"].append(newmod)
                 
+                # Normalize whitespace before saving
+                newcommit["markdown"] = _format_markdown(newcommit["markdown"])
                 commits.append(newcommit)
                 
                 if(not args["dryrun"]):
@@ -203,8 +198,15 @@ def main(args):
                         file1.write(newcommit["markdown"])
     
     # Rebuild index after processing commits
-    if not args["dryrun"] and args.get("obsidian_index", True):
-        processor = TestProcessor(args['outputfolder'])
-        processor._rebuild_index(verbose=args.get("verbose", False))
+    should_build_index = args.get("obsidian_index", True)
+    should_build_devlog = args.get("devlog", False)
 
-    
+    if not args["dryrun"] and (should_build_index or should_build_devlog):
+        processor = TestProcessor(args['outputfolder'])
+        processor._rebuild_index(
+            verbose=args.get("verbose", False),
+            build_devlog=should_build_devlog,
+            write_index=should_build_index,
+        )
+
+

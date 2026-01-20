@@ -11,10 +11,15 @@ def rebuild_main(args):
     try:
         processor._rebuild_index(
             verbose=args.get('verbose', False),
-            changelog_order=args.get('changelog', False)
+            changelog_order=args.get('changelog', False),
+            build_devlog=args.get('devlog', False)
         )
         if not args.get('verbose'):
-            print(f"Index rebuilt: {args.get('outputfolder', 'devlog')}/index.md")
+            base = args.get('outputfolder', 'devlog')
+            message = f"Index rebuilt: {base}/index.md"
+            if args.get('devlog', False):
+                message += f" and {base}/devlog.md"
+            print(message)
         return 0
     except Exception as e:
         print(f"Error rebuilding index: {e}", file=sys.stderr)
@@ -88,6 +93,12 @@ def main():
         help="Don't generate Obsidian-style index.md file",
     )
     log_parser.set_defaults(obsidian_index=True)
+
+    log_parser.add_argument(
+        "--devlog",
+        action="store_true",
+        help="Generate a combined devlog.md with all commit and test content",
+    )
     
     # Test command (processes test output)
     test_parser = subparsers.add_parser(
@@ -128,6 +139,11 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
         action="store_true",
         help="Include raw test output in the report"
     )
+    test_parser.add_argument(
+        "--devlog",
+        action="store_true",
+        help="Generate a combined devlog.md alongside index rebuild",
+    )
     
     # Rebuild command (regenerates index from existing files)
     rebuild_parser = subparsers.add_parser(
@@ -149,6 +165,11 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
         "--changelog",
         action="store_true",
         help="Use changelog order (newest first) instead of default (oldest first)"
+    )
+    rebuild_parser.add_argument(
+        "--devlog",
+        action="store_true",
+        help="Generate a combined devlog.md when rebuilding",
     )
     
     # Parse args, but handle backwards compatibility
@@ -173,7 +194,8 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
             'branch': None,
             'force': False,
             'dryrun': False,
-            'obsidian_index': True
+            'obsidian_index': True,
+            'devlog': False
         }
         core_main(default_args)
         return
@@ -185,8 +207,6 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
         sys.exit(rebuild_main(vars(args)))
     else:
         core_main(vars(args))
-
-
 
 
 if __name__ == "__main__":
