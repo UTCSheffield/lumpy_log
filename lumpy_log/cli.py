@@ -2,24 +2,45 @@
 import argparse
 import sys
 from .core import main as core_main
-from .test_processor import main as test_main, TestProcessor
+from .test_processor import main as test_main
+from .config import get_output_format
+from .utils import _rebuild_index
 
 
 def rebuild_main(args):
     """Rebuild index from existing commits and test results"""
-    processor = TestProcessor(args.get('outputfolder', 'devlog'))
     try:
-        processor._rebuild_index(
+        output_folder = args.get('outputfolder', 'devlog')
+        repo_path = '.'
+        
+        # Check if CLI switch was provided
+        if args.get('output_format'):
+            output_formats = args['output_format']
+            if isinstance(output_formats, str):
+                output_formats = [output_formats]
+        else:
+            output_formats = get_output_format(args, repo_path)
+        
+        results = _rebuild_index(
+            output_folder,
             verbose=args.get('verbose', False),
             changelog_order=args.get('changelog', False),
-            build_devlog=args.get('devlog', False)
+            output_formats=output_formats
         )
+        
         if not args.get('verbose'):
-            base = args.get('outputfolder', 'devlog')
-            message = f"Index rebuilt: {base}/index.md"
-            if args.get('devlog', False):
-                message += f" and {base}/devlog.md"
-            print(message)
+            parts = ["Index rebuilt:"]
+            if "obsidian" in results:
+                parts.append(f"{results['obsidian']}")
+            if "devlog" in results:
+                parts.append(f"{results['devlog']}")
+            if "docx" in results:
+                parts.append(f"{results['docx']}")
+            print(" ".join(parts))
+        else:
+            # If docx was requested but not produced, emit an explicit note
+            if "docx" in output_formats and "docx" not in results:
+                print("Note: docx requested but not produced (md2docx not installed or failed)")
         return 0
     except Exception as e:
         print(f"Error rebuilding index: {e}", file=sys.stderr)
@@ -170,6 +191,13 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
         "--devlog",
         action="store_true",
         help="Generate a combined devlog.md when rebuilding",
+    )
+    rebuild_parser.add_argument(
+        "--output-format",
+        dest="output_format",
+        nargs='+',
+        choices=['obsidian', 'devlog', 'docx'],
+        help="Output format(s) (overrides .lumpyconfig.yml)"
     )
     
     # Parse args, but handle backwards compatibility

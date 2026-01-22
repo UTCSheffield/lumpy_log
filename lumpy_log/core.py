@@ -9,7 +9,8 @@ from pydriller import Repository
 from .changelump import ChangeLump
 from .languages import Languages
 from .test_processor import TestProcessor
-from .utils import _get_templates_dir, _format_markdown
+from .utils import _get_templates_dir, _format_markdown, _rebuild_index
+from .config import get_output_format
 
 languages = Languages(os.path.join(os.path.dirname(os.path.abspath(__file__)), "languages.yml"))
 
@@ -89,7 +90,8 @@ def main(args):
 
     # Build ignore spec once per run
     ignore_spec = _load_lumpy_ignore(args['repo'])
-
+    output_formats = get_output_format(args, args['repo'])
+    
     for commit in Repository(args['repo'], **kwargs).traverse_commits():
         if(args["allbranches"] or (
             (args["branch"] is None and commit.in_main_branch)
@@ -190,23 +192,16 @@ def main(args):
                 # Normalize whitespace before saving
                 newcommit["markdown"] = _format_markdown(newcommit["markdown"])
                 commits.append(newcommit)
-                
-                if(not args["dryrun"]):
-                    with open( genfilepath, "w") as file1:
-                        # Writing data to a file
-                        #file1.write("\n\n".join(newcommit["markdown"]))
-                        file1.write(newcommit["markdown"])
     
     # Rebuild index after processing commits
     should_build_index = args.get("obsidian_index", True)
     should_build_devlog = args.get("devlog", False)
 
     if not args["dryrun"] and (should_build_index or should_build_devlog):
-        processor = TestProcessor(args['outputfolder'])
-        processor._rebuild_index(
+        _rebuild_index(
+            args['outputfolder'],
             verbose=args.get("verbose", False),
-            build_devlog=should_build_devlog,
-            write_index=should_build_index,
+            output_formats=output_formats,
         )
 
 
