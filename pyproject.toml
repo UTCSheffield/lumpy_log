@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lumpy-log"
-version = "0.1.5"
+version = "0.1.6"
 description = "Make git logs easier for use in scenarios when communicating the progress of a project to non-experts"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -32,8 +32,6 @@ dependencies = [
     "pyyaml",
     "pathspec",
     "mdformat",
-    "python-docx>=0.8.11",
-    "Pillow>=9.0",
 ]
 
 [project.urls]
@@ -51,13 +49,25 @@ include = ["lumpy_log*"]
 lumpy_log = ["templates/*.md", "languages.yml"]
 
 [project.optional-dependencies]
-highlight = [
+docx = [
+    "python-docx>=0.8.11",
+    "Pillow>=9.0",
     "Pygments>=2.14",
-]
-mermaid = [
     "requests>=2.31",
 ]
+
+docx-images = [
+    "python-docx>=0.8.11",
+    "Pillow>=9.0",
+    "Pygments>=2.14",
+    "requests>=2.31",
+    "playwright>=1.40",
+]
+
 all = [
+    "python-docx>=0.8.11",
+    "Pillow>=9.0",
     "Pygments>=2.14",
     "requests>=2.31",
+    "playwright>=1.40",
 ]

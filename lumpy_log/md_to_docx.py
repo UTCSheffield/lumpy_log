@@ -5,6 +5,7 @@ with nice code block handling and no external markdown parsing dependencies.
 """
 
 import re
+import hashlib
 from pathlib import Path
 from typing import List, Tuple
 from docx import Document
@@ -16,6 +17,44 @@ from docx.oxml import OxmlElement
 import os
 import tempfile
 import urllib.request
+import base64
+
+
+def _get_cache_dir() -> Path:
+    """Get or create the cache directory for code images."""
+    package_dir = os.path.dirname(os.path.abspath(__file__))
+    cache_dir = Path(".lumpy_cache") / "code_images"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir
+
+
+def _get_cached_image(code: str, language: str, renderer: str = "hcti") -> Path:
+    """Check if a cached image exists for this code block."""
+    content = f"{renderer}:{language}:{code}"
+    cache_key = hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+    cache_dir = _get_cache_dir()
+    cached_file = cache_dir / f"{cache_key}.png"
+    
+    print(f"Looking for cached image at: {cached_file}")
+    if cached_file.exists():
+        print("Found cached image.")
+        return cached_file
+    return None
+
+
+def _save_to_cache(code: str, language: str, image_bytes: bytes, renderer: str = "hcti") -> Path:
+    """Save rendered image to cache."""
+    content = f"{renderer}:{language}:{code}"
+    cache_key = hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+    cache_dir = _get_cache_dir()
+    cached_file = cache_dir / f"{cache_key}.png"
+
+    with open(cached_file, "wb") as f:
+        f.write(image_bytes)
+
+    return cached_file
 
 
 def _add_code_block_formatting(paragraph, background_color: Tuple[int, int, int] = (240, 240, 240), apply_text_color: bool = True):
@@ -26,10 +65,10 @@ def _add_code_block_formatting(paragraph, background_color: Tuple[int, int, int]
         background_color: RGB tuple for background color (default: light gray)
         apply_text_color: If True, apply text color to code blocks (default: True)
     """
-    # Set monospace font
+    # Set monospace font with console-style formatting
     for run in paragraph.runs:
         run.font.name = 'Courier New'
-        run.font.size = Pt(10)
+        run.font.size = Pt(9)  # Slightly smaller for better code density
         if apply_text_color:
             run.font.color.rgb = RGBColor(30, 30, 30)
     
@@ -40,7 +79,11 @@ def _add_code_block_formatting(paragraph, background_color: Tuple[int, int, int]
     
     # Set left margin/indent
     paragraph.paragraph_format.left_indent = Inches(0.25)
-    paragraph.paragraph_format.line_spacing = 1.15
+    # Reduced line spacing for console appearance
+    paragraph.paragraph_format.line_spacing = 1.0
+    # Minimize spacing between code lines
+    paragraph.paragraph_format.space_before = Pt(0)
+    paragraph.paragraph_format.space_after = Pt(0)
 
 
 # NEW: syntax-highlighted code block rendering (optional pygments)
@@ -53,8 +96,9 @@ def _add_highlighted_code_block(doc, code: str, language: str = ""):
         from pygments.token import Token
     except Exception:
         # Fallback to plain code block formatting
-        para = doc.add_paragraph(code, style='Normal')
-        _add_code_block_formatting(para)
+        for line in code.split('\n'):
+            para = doc.add_paragraph(line or ' ', style='Normal')
+            _add_code_block_formatting(para)
         return
 
     try:
@@ -94,7 +138,7 @@ def _add_highlighted_code_block(doc, code: str, language: str = ""):
             if piece:
                 run = paragraph.add_run(piece)
                 run.font.name = 'Courier New'
-                run.font.size = Pt(10)
+                run.font.size = Pt(9)  # Match reduced size from _add_code_block_formatting
                 attrs = _style_for(tok_type)
                 if attrs['bold']:
                     run.bold = True
@@ -137,17 +181,299 @@ def _render_mermaid_and_insert(doc, mermaid_code: str, width_inches: float = 6.0
         _add_code_block_formatting(para)
 
 
-def markdown_to_docx(markdown_content: str, output_path: str) -> bool:
+def _render_code_with_playwright(html_content: str, width_inches: float = 6.0) -> bytes:
+    """Render HTML to PNG using Playwright (local, no API credentials required).
+
+    Returns PNG bytes on success, or None on failure/missing dependency.
+    """
+    debug = os.environ.get('LUMPY_DEBUG') == '1'
+    
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as e:
+        if debug:
+            print(f"[DEBUG] Playwright not available: {e}")
+        return None
+
+    width_px = max(int(width_inches * 96), 640)
+    
+    if debug:
+        print(f"[DEBUG] Rendering code block with Playwright")
+        print(f"[DEBUG] Width: {width_inches} inches ({width_px} px)")
+        print(f"[DEBUG] HTML content length: {len(html_content)} chars")
+
+    try:
+        with sync_playwright() as p:
+            browser_name = os.environ.get("LUMPY_PLAYWRIGHT_BROWSER", "chromium").lower()
+            if debug:
+                print(f"[DEBUG] Launching browser: {browser_name}")
+            
+            # Try to use system chromium first, then fall back to bundled
+            launch_kwargs = {"args": ["--no-sandbox"]}
+            
+            # If system chromium exists, use it
+            system_chromium = "/usr/bin/chromium-browser"
+            if os.path.exists(system_chromium):
+                if debug:
+                    print(f"[DEBUG] Using system chromium: {system_chromium}")
+                launch_kwargs["executable_path"] = system_chromium
+            
+            browser = {
+                "chromium": p.chromium,
+                "firefox": p.firefox,
+                "webkit": p.webkit,
+            }.get(browser_name, p.chromium).launch(**launch_kwargs)
+            
+            if debug:
+                print(f"[DEBUG] Browser launched successfully")
+            
+            page = browser.new_page(viewport={"width": width_px, "height": 10})
+            
+            if debug:
+                print(f"[DEBUG] Page created with initial viewport: {width_px}x10")
+            
+            try:
+                page.set_content(html_content, wait_until="load")
+                if debug:
+                    print(f"[DEBUG] HTML content set on page")
+            except Exception as e:
+                if debug:
+                    print(f"[DEBUG] Error setting page content: {e}")
+                raise
+            
+            # Resize to the content height for a tight screenshot
+            try:
+                box = page.evaluate("""
+                    () => {
+                        const pre = document.querySelector('pre');
+                        const rect = pre ? pre.getBoundingClientRect() : document.body.getBoundingClientRect();
+                        return { 
+                            width: Math.ceil(rect.width) + 40, 
+                            height: Math.ceil(rect.height) + 40,
+                            preFound: !!pre
+                        };
+                    }
+                """)
+                if debug:
+                    print(f"[DEBUG] Content box measurements: {box}")
+            except Exception as e:
+                if debug:
+                    print(f"[DEBUG] Error evaluating content size: {e}")
+                box = {"width": width_px, "height": 400, "preFound": False}
+            
+            final_width = max(width_px, box.get("width", width_px))
+            final_height = box.get("height", 400)
+            
+            if debug:
+                print(f"[DEBUG] Setting final viewport to: {final_width}x{final_height}")
+            
+            page.set_viewport_size({"width": final_width, "height": final_height})
+            
+            # Add a small delay to ensure rendering is complete
+            page.wait_for_load_state("networkidle")
+            
+            if debug:
+                print(f"[DEBUG] Taking screenshot...")
+            
+            img_bytes = page.screenshot(full_page=True)
+            
+            if debug:
+                print(f"[DEBUG] Screenshot captured: {len(img_bytes)} bytes")
+            
+            browser.close()
+            return img_bytes
+    except Exception as e:
+        if debug:
+            print(f"[DEBUG] Error in Playwright rendering: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+        return None
+
+
+def _render_code_as_image_and_insert(doc, code: str, language: str = "", width_inches: float = 6.0, hcti_user_id: str = None, hcti_api_key: str = None, use_cache: bool = True):
+    """Render code block to PNG (HCTI if available, otherwise local Playwright) and insert.
+    Falls back to text rendering if both fail.
+    """
+    debug = os.environ.get('LUMPY_DEBUG') == '1'
+    
+    api_user_id = hcti_user_id or os.environ.get('HCTI_API_USER_ID')
+    api_key = hcti_api_key or os.environ.get('HCTI_API_KEY')
+
+    # Determine which renderer will be used
+    will_use_hcti = bool(api_user_id and api_key)
+    renderer = "hcti" if will_use_hcti else "playwright"
+    
+    if debug:
+        print(f"\n[DEBUG] _render_code_as_image_and_insert called")
+        print(f"[DEBUG] Language: {language}")
+        print(f"[DEBUG] Renderer: {renderer}")
+        print(f"[DEBUG] Code length: {len(code)} chars")
+        print(f"[DEBUG] Use cache: {use_cache}")
+
+    # Cache check first (with renderer-specific key)
+    if use_cache:
+        cached_image = _get_cached_image(code, language, renderer)
+        if cached_image:
+            if debug:
+                print(f"[DEBUG] Using cached image: {cached_image}")
+            try:
+                doc.add_picture(str(cached_image), width=Inches(width_inches))
+                return
+            except Exception as e:
+                if debug:
+                    print(f"[DEBUG] Error adding cached picture: {e}")
+
+    # Build HTML once (offline-friendly, no external assets)
+    html_content = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <style>
+        :root {{
+            --bg: #f6f8fa;
+            --fg: #24292f;
+            --border: #d0d7de;
+        }}
+        * {{ box-sizing: border-box; }}
+        body {{
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: white;
+        }}
+        pre {{
+            margin: 0;
+            padding: 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow-x: auto;
+            color: var(--fg);
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre;
+        }}
+        code {{
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }}
+    </style>
+</head>
+<body>
+    <pre><code>{code.replace('<', '&lt;').replace('>', '&gt;')}</code></pre>
+</body>
+</html>'''
+
+    if debug:
+        print(f"[DEBUG] Generated HTML: {len(html_content)} chars")
+
+    img_bytes = None
+
+    # Try HCTI if credentials are present
+    if api_user_id and api_key:
+        if debug:
+            print(f"[DEBUG] Attempting HCTI rendering...")
+        try:
+            import json
+
+            data = json.dumps({
+                'html': html_content,
+                'css': '',
+                'google_fonts': 'Courier New'
+            }).encode('utf-8')
+
+            credentials = base64.b64encode(f'{api_user_id}:{api_key}'.encode('utf-8')).decode('utf-8')
+            req = urllib.request.Request(
+                url='https://hcti.io/v1/image',
+                data=data,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Basic {credentials}'
+                }
+            )
+
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read().decode('utf-8'))
+                img_url = result.get('url')
+                if debug:
+                    print(f"[DEBUG] HCTI response URL: {img_url}")
+                if img_url:
+                    with urllib.request.urlopen(img_url, timeout=30) as img_resp:
+                        img_bytes = img_resp.read()
+                        if debug:
+                            print(f"[DEBUG] HCTI image downloaded: {len(img_bytes)} bytes")
+        except Exception as e:
+            if debug:
+                print(f"[DEBUG] HCTI rendering failed: {type(e).__name__}: {e}")
+            img_bytes = None
+
+    # If no HCTI or it failed, try local Playwright rendering
+    if img_bytes is None:
+        if debug:
+            print(f"[DEBUG] Attempting Playwright rendering...")
+        img_bytes = _render_code_with_playwright(html_content, width_inches=width_inches)
+
+    # If everything failed, fall back to text rendering
+    if img_bytes is None:
+        if debug:
+            print(f"[DEBUG] All image rendering failed, falling back to text rendering")
+        _add_highlighted_code_block(doc, code, language)
+        return
+
+    if debug:
+        print(f"[DEBUG] Image rendering successful: {len(img_bytes)} bytes")
+
+    # Persist to cache if enabled, otherwise use a temp file
+    if use_cache:
+        try:
+            cached_path = _save_to_cache(code, language, img_bytes, renderer)
+            if debug:
+                print(f"[DEBUG] Cached to: {cached_path}")
+            doc.add_picture(str(cached_path), width=Inches(width_inches))
+            return
+        except Exception as e:
+            if debug:
+                print(f"[DEBUG] Error caching image: {e}")
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+    try:
+        tmp.write(img_bytes)
+        tmp.close()
+        if debug:
+            print(f"[DEBUG] Adding picture from temp file: {tmp.name}")
+        doc.add_picture(tmp.name, width=Inches(width_inches))
+    finally:
+        os.unlink(tmp.name)
+
+
+def markdown_to_docx(markdown_content: str, output_path: str, render_code_as_images: bool = False, hcti_user_id: str = None, hcti_api_key: str = None) -> bool:
     """Convert markdown content to DOCX file.
     
     Args:
         markdown_content: Markdown text to convert
         output_path: Path where to save the DOCX file
+        render_code_as_images: If True, render code blocks as images using HCTI API or Playwright.
+                              Note: Playwright rendering requires proper X11 environment and system dependencies.
+                              Recommended to use HCTI API credentials for reliable image rendering.
+        hcti_user_id: HCTI API User ID (optional, falls back to environment variable)
+        hcti_api_key: HCTI API Key (optional, falls back to environment variable)
     
     Returns:
         True if conversion succeeded, False otherwise
     """
     doc = Document()
+    
+    # Configure page size and margins
+    section = doc.sections[0]
+    section.page_height = Inches(11.69)  # A4 height
+    section.page_width = Inches(8.27)    # A4 width
+    
+    # Set narrow margins (0.5 inches)
+    section.top_margin = Inches(0.5)
+    section.bottom_margin = Inches(0.5)
+    section.left_margin = Inches(0.5)
+    section.right_margin = Inches(0.5)
     
     # Track if we're in a code block
     in_code_block = False
@@ -170,6 +496,8 @@ def markdown_to_docx(markdown_content: str, output_path: str) -> bool:
                     lang = (code_language or '').strip().lower()
                     if lang == 'mermaid':
                         _render_mermaid_and_insert(doc, code_content)
+                    elif render_code_as_images:
+                        _render_code_as_image_and_insert(doc, code_content, lang, hcti_user_id=hcti_user_id, hcti_api_key=hcti_api_key)
                     else:
                         _add_highlighted_code_block(doc, code_content, lang)
                 code_block_lines = []
@@ -269,12 +597,15 @@ def markdown_to_docx(markdown_content: str, output_path: str) -> bool:
         return False
 
 
-def markdown_file_to_docx(markdown_file: str, output_file: str = None) -> bool:
+def markdown_file_to_docx(markdown_file: str, output_file: str = None, render_code_as_images: bool = False, hcti_user_id: str = None, hcti_api_key: str = None) -> bool:
     """Convert a markdown file to DOCX.
     
     Args:
         markdown_file: Path to markdown file
         output_file: Path for output DOCX file (defaults to same name with .docx extension)
+        render_code_as_images: If True, render code blocks as images using HCTI API
+        hcti_user_id: HCTI API User ID (optional, falls back to environment variable)
+        hcti_api_key: HCTI API Key (optional, falls back to environment variable)
     
     Returns:
         True if conversion succeeded, False otherwise
@@ -290,7 +621,7 @@ def markdown_file_to_docx(markdown_file: str, output_file: str = None) -> bool:
     
     try:
         content = md_path.read_text(encoding='utf-8')
-        return markdown_to_docx(content, output_file)
+        return markdown_to_docx(content, output_file, render_code_as_images, hcti_user_id, hcti_api_key)
     except Exception as e:
         print(f"Error reading markdown file: {e}")
         return False

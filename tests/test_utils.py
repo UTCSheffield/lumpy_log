@@ -114,14 +114,15 @@ class TestCollectItems:
         """Should return a tuple of (items, commits, tests)."""
         result = _collect_items("/tmp")
         assert isinstance(result, tuple)
-        assert len(result) == 3
+        assert len(result) == 4
 
     def test_empty_folder(self, tmp_path):
         """Should handle empty folder gracefully."""
-        items, commits, tests = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         assert items == []
         assert commits == []
         assert tests == []
+        assert total == 0
 
     def test_collects_commits(self, tmp_path):
         """Should collect markdown files from commits/ directory."""
@@ -129,7 +130,7 @@ class TestCollectItems:
         commits_dir.mkdir()
         (commits_dir / "20240101_1200_test.md").write_text("content")
 
-        items, commits, tests = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         assert len(commits) == 1
         assert commits[0].name == "20240101_1200_test.md"
 
@@ -139,7 +140,7 @@ class TestCollectItems:
         tests_dir.mkdir()
         (tests_dir / "20240101_1200_test.md").write_text("content")
 
-        items, commits, tests = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         assert len(tests) == 1
         assert tests[0].name == "20240101_1200_test.md"
 
@@ -149,7 +150,7 @@ class TestCollectItems:
         commits_dir.mkdir()
         (commits_dir / "20240101_1200_commit.md").write_text("content")
 
-        items, _, _ = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         assert len(items) == 1
         item = items[0]
         assert "path" in item
@@ -165,7 +166,7 @@ class TestCollectItems:
         (commits_dir / "20240102_1200_test.md").write_text("content")
         (commits_dir / "20240101_1200_test.md").write_text("content")
 
-        items, _, _ = _collect_items(str(tmp_path), changelog_order=False)
+        items, commits, tests, total = _collect_items(str(tmp_path), changelog_order=False)
         assert items[0]["filename"] == "20240101_1200_test.md"
         assert items[1]["filename"] == "20240102_1200_test.md"
 
@@ -176,7 +177,7 @@ class TestCollectItems:
         (commits_dir / "20240101_1200_test.md").write_text("content")
         (commits_dir / "20240102_1200_test.md").write_text("content")
 
-        items, _, _ = _collect_items(str(tmp_path), changelog_order=True)
+        items, commits, tests, total = _collect_items(str(tmp_path), changelog_order=True)
         assert items[0]["filename"] == "20240102_1200_test.md"
         assert items[1]["filename"] == "20240101_1200_test.md"
 
@@ -190,7 +191,7 @@ class TestGenerateObsidianIndex:
         commits_dir.mkdir()
         (commits_dir / "20240101_1200_commit.md").write_text("# Commit\nContent")
 
-        items, commits, tests = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         result = _generate_obsidian_index(str(tmp_path), items)
 
         assert "obsidian" in result
@@ -202,7 +203,7 @@ class TestGenerateObsidianIndex:
         commits_dir.mkdir()
         (commits_dir / "20240101_1200_mycommit.md").write_text("# My Commit")
 
-        items, _, _ = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         _generate_obsidian_index(str(tmp_path), items)
 
         index_content = (tmp_path / "index.md").read_text(encoding="utf-8")
@@ -215,7 +216,7 @@ class TestGenerateObsidianIndex:
         commits_dir.mkdir()
         (commits_dir / "20240101_1200_test.md").write_text("content")
 
-        items, _, _ = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         result = _generate_obsidian_index(str(tmp_path), items)
 
         assert isinstance(result, dict)
@@ -232,7 +233,7 @@ class TestGenerateDevlog:
         commits_dir.mkdir()
         (commits_dir / "20240101_1200_commit.md").write_text("# Commit\nBody")
 
-        items, _, _ = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         result = _generate_devlog(str(tmp_path), items)
 
         assert "devlog" in result
@@ -244,7 +245,7 @@ class TestGenerateDevlog:
         commits_dir.mkdir()
         (commits_dir / "20240101_1200_commit.md").write_text("# Commit\nTest body")
 
-        items, _, _ = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         _generate_devlog(str(tmp_path), items)
 
         devlog_content = (tmp_path / "devlog.md").read_text(encoding="utf-8")
@@ -261,7 +262,7 @@ class TestGenerateDevlog:
         (commits_dir / "20240101_1200_commit.md").write_text("# Commit 1")
         (tests_dir / "20240102_1200_test.md").write_text("# Test 1")
 
-        items, _, _ = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         _generate_devlog(str(tmp_path), items)
 
         devlog_content = (tmp_path / "devlog.md").read_text(encoding="utf-8")
@@ -275,7 +276,7 @@ class TestGenerateDevlog:
         commits_dir.mkdir()
         (commits_dir / "20240101_1200_test.md").write_text("content")
 
-        items, _, _ = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         _generate_devlog(str(tmp_path), items)
 
         devlog_content = (tmp_path / "devlog.md").read_text(encoding="utf-8")
@@ -289,7 +290,7 @@ class TestGenerateDevlog:
         commits_dir.mkdir()
         (commits_dir / "20240101_1200_test.md").write_text("content")
 
-        items, _, _ = _collect_items(str(tmp_path))
+        items, commits, tests, total = _collect_items(str(tmp_path))
         result = _generate_devlog(str(tmp_path), items)
 
         assert isinstance(result, dict)

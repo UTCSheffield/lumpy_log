@@ -1,5 +1,5 @@
 ## Test Results : {{ generation_date }}
-**Format:** {{ format }}
+<!-- **Format:** {{ format }} -->
 
 {% if format == 'tap' %}
 - **Tests Run:** {{ tests_run }}
@@ -24,7 +24,7 @@
 {% if raw_output %}
 ## Raw Output
 
-```
+```console
 {{ raw_output }}
 ```
 

@@ -1,17 +1,28 @@
 """Command-line interface for Lumpy Log"""
 import argparse
 import sys
+from pathlib import Path
+from datetime import datetime
+from jinja2 import Environment, FileSystemLoader
 from .core import main as core_main
 from .test_processor import main as test_main
-from .config import get_output_format
-from .utils import _rebuild_index
+from .config import get_output_format, print_active_config, get_config_value
+from .utils import _rebuild_index, _get_templates_dir, _format_markdown
 
 
 def rebuild_main(args):
     """Rebuild index from existing commits and test results"""
     try:
-        output_folder = args.get('outputfolder', 'devlog')
+        # Use config system for defaults
+        from .config import get_config_value
+        
+        output_folder = get_config_value('outputfolder', args, '.', 'devlog')
         repo_path = '.'
+        
+        # Show active configuration if verbose
+        verbose = get_config_value('verbose', args, '.', False)
+        if verbose:
+            print_active_config(args, repo_path)
         
         # Check if CLI switch was provided
         if args.get('output_format'):
@@ -21,14 +32,30 @@ def rebuild_main(args):
         else:
             output_formats = get_output_format(args, repo_path)
         
+        # Detect current branch
+        import subprocess
+        try:
+            result = subprocess.run(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                cwd=repo_path,
+                capture_output=True,
+                text=True
+            )
+            current_branch = result.stdout.strip() if result.returncode == 0 else "unknown"
+        except Exception:
+            current_branch = "unknown"
+        
         results = _rebuild_index(
             output_folder,
-            verbose=args.get('verbose', False),
-            changelog_order=args.get('changelog', False),
-            output_formats=output_formats
+            verbose=verbose,
+            changelog_order=get_config_value('changelog', args, '.', False),
+            output_formats=output_formats,
+            current_branch=current_branch,
+            limit=get_config_value('limit', args, '.', None),
+            repo_path=repo_path
         )
         
-        if not args.get('verbose'):
+        if not verbose:
             parts = ["Index rebuilt:"]
             if "obsidian" in results:
                 parts.append(f"{results['obsidian']}")
@@ -44,10 +71,60 @@ def rebuild_main(args):
         return 0
     except Exception as e:
         print(f"Error rebuilding index: {e}", file=sys.stderr)
-        if args.get('verbose'):
+        verbose = args.get('verbose', False)
+        if verbose:
             import traceback
             traceback.print_exc()
         return 1
+
+
+def entry_main(args):
+    """Create a new dated entry from the entry template and rebuild index"""
+    repo_path = '.'
+    verbose = get_config_value('verbose', args, repo_path, False)
+    if verbose:
+        print_active_config(args, repo_path)
+
+    output_folder = get_config_value('outputfolder', args, repo_path, 'devlog')
+    entries_dir = Path(output_folder) / "entries"
+    entries_dir.mkdir(parents=True, exist_ok=True)
+
+    now = datetime.now()
+    title = args.get('title') or now.strftime("%Y-%m-%d")
+    filename = args.get('filename') or f"{now.strftime('%Y%m%d')}.md"
+    filepath = entries_dir / filename
+
+    if filepath.exists() and not args.get('force'):
+        print(f"Entry already exists: {filepath}", file=sys.stderr)
+        return 1
+
+    env = Environment(loader=FileSystemLoader(_get_templates_dir()))
+    template = env.get_template('entry.md')
+    rendered = template.render({
+        'title': title,
+        'generation_date': now.strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    content = _format_markdown(rendered)
+    filepath.write_text(content, encoding='utf-8')
+
+    if verbose:
+        print(f"Entry created: {filepath}")
+
+    output_formats = get_output_format(args, repo_path)
+    _rebuild_index(
+        output_folder,
+        verbose=verbose,
+        changelog_order=get_config_value('changelog', args, repo_path, False),
+        output_formats=output_formats,
+        current_branch=None,
+        limit=get_config_value('limit', args, repo_path, None),
+        repo_path=repo_path,
+    )
+
+    if not verbose:
+        print(f"Entry created: {filepath}")
+
+    return 0
 
 
 def main():
@@ -69,7 +146,7 @@ def main():
     )
     log_parser.add_argument(
         "-o", "--outputfolder",
-        default="devlog",
+        default=None,
         help="Output folder for generated files (default: devlog)"
     )
     log_parser.add_argument(
@@ -83,19 +160,10 @@ def main():
         help="End at this commit"
     )
     log_parser.add_argument(
-        "-a", "--allbranches",
-        action="store_true",
-        help="Include all branches"
-    )
-    log_parser.add_argument(
         "-v", "--verbose",
         action="store_true",
+        default=None,
         help="Verbose output"
-    )
-    log_parser.add_argument(
-        "-b", "--branch",
-        dest="branch",
-        help="Specific branch to process"
     )
     log_parser.add_argument(
         "--force",
@@ -118,7 +186,13 @@ def main():
     log_parser.add_argument(
         "--devlog",
         action="store_true",
+        default=None,
         help="Generate a combined devlog.md with all commit and test content",
+    )
+    log_parser.add_argument(
+        "--limit",
+        type=int,
+        help="Limit index/devlog to N most recent entries"
     )
     
     # Test command (processes test output)
@@ -143,7 +217,7 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
     )
     test_parser.add_argument(
         "-o", "--outputfolder",
-        default="devlog",
+        default=None,
         help="Output folder for test results (default: devlog)"
     )
     test_parser.add_argument(
@@ -153,17 +227,26 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
     test_parser.add_argument(
         "-v", "--verbose",
         action="store_true",
+        default=None,
         help="Verbose output"
     )
     test_parser.add_argument(
-        "--raw-output",
+        "--raw-test-output",
+        dest="raw_test_output",
         action="store_true",
+        default=None,
         help="Include raw test output in the report"
     )
     test_parser.add_argument(
         "--devlog",
         action="store_true",
+        default=None,
         help="Generate a combined devlog.md alongside index rebuild",
+    )
+    test_parser.add_argument(
+        "--limit",
+        type=int,
+        help="Limit index/devlog to N most recent entries"
     )
     
     # Rebuild command (regenerates index from existing files)
@@ -174,25 +257,75 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
     )
     rebuild_parser.add_argument(
         "-o", "--outputfolder",
-        default="devlog",
+        default=None,
         help="Output folder containing commits/ and tests/ (default: devlog)"
     )
     rebuild_parser.add_argument(
         "-v", "--verbose",
         action="store_true",
+        default=None,
         help="Verbose output"
     )
     rebuild_parser.add_argument(
         "--changelog",
         action="store_true",
+        default=None,
         help="Use changelog order (newest first) instead of default (oldest first)"
     )
     rebuild_parser.add_argument(
         "--devlog",
         action="store_true",
+        default=None,
         help="Generate a combined devlog.md when rebuilding",
     )
     rebuild_parser.add_argument(
+        "--output-format",
+        dest="output_format",
+        nargs='+',
+        choices=['obsidian', 'devlog', 'docx'],
+        help="Output format(s) (overrides .lumpyconfig.yml)"
+    )
+    rebuild_parser.add_argument(
+        "--limit",
+        type=int,
+        help="Limit index/devlog to N most recent entries"
+    )
+
+    # Entry command (creates a dated entry from template)
+    entry_parser = subparsers.add_parser(
+        'entry',
+        help='Create a new dated entry from the entry template and rebuild the index'
+    )
+    entry_parser.add_argument(
+        "-o", "--outputfolder",
+        default=None,
+        help="Output folder containing entries/ (default: devlog)"
+    )
+    entry_parser.add_argument(
+        "-t", "--title",
+        help="Title to place in the entry"
+    )
+    entry_parser.add_argument(
+        "-f", "--filename",
+        help="Optional filename for the entry (default: YYYYMMDD.md)"
+    )
+    entry_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing entry file if present"
+    )
+    entry_parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        default=None,
+        help="Verbose output"
+    )
+    entry_parser.add_argument(
+        "--limit",
+        type=int,
+        help="Limit index/devlog to N most recent entries"
+    )
+    entry_parser.add_argument(
         "--output-format",
         dest="output_format",
         nargs='+',
@@ -217,9 +350,7 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
             'outputfolder': 'devlog',
             'from_commit': None,
             'to_commit': None,
-            'allbranches': False,
             'verbose': False,
-            'branch': None,
             'force': False,
             'dryrun': False,
             'obsidian_index': True,
@@ -233,6 +364,8 @@ Note: Requires pytest-tap plugin (pip install pytest-tap)
         sys.exit(test_main(vars(args)))
     elif args.command == 'rebuild':
         sys.exit(rebuild_main(vars(args)))
+    elif args.command == 'entry':
+        sys.exit(entry_main(vars(args)))
     else:
         core_main(vars(args))
 

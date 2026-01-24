@@ -33,6 +33,17 @@ cd lumpy_log
 pip install -e .
 ```
 
+### Optional: DOCX code blocks as images (no API)
+
+To enable local image rendering for code blocks in DOCX (Playwright fallback):
+
+```bash
+pip install "lumpy-log[docx-images]"
+playwright install chromium  # or firefox/webkit; export LUMPY_PLAYWRIGHT_BROWSER=firefox
+```
+
+If you prefer API-based rendering, see [HCTI_SETUP.md](HCTI_SETUP.md).
+
 ## Usage
 
 ### As a CLI Command

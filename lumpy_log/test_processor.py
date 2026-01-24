@@ -8,11 +8,13 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from .tap_parser import parse_test_output
 from .utils import _clean_markdown, _get_templates_dir, _format_markdown, _rebuild_index
+from .config import print_active_config, get_output_format, get_config_value, get_raw_output
+
 class TestProcessor:
     """Process test output and generate markdown files"""
     
-    def __init__(self, output_folder: str = "output"):
-        self.output_folder = Path(output_folder)
+    def __init__(self, output_folder: str = "devlog"):
+        self.output_folder = Path(output_folder or "devlog")
         self.tests_dir = self.output_folder / "tests"
         
         # Set up Jinja2 environment
@@ -65,6 +67,8 @@ class TestProcessor:
         verbose: bool = False,
         raw_output: bool = False,
         build_devlog: bool = False,
+        limit: int = None,
+        output_formats: list = None,
     ) -> Path:
         """
         Process test output and generate markdown file
@@ -73,10 +77,15 @@ class TestProcessor:
             output: Test output string
             verbose: Print progress messages
             raw_output: Include raw output in the markdown report
+            output_formats: List of output formats (e.g., ['obsidian', 'docx'])
             
         Returns:
             Path to generated markdown file
         """
+        # Use provided formats or default to obsidian
+        if output_formats is None:
+            output_formats = ["obsidian"]
+        
         # Parse test output
         test_data = parse_test_output(output)
         
@@ -111,7 +120,9 @@ class TestProcessor:
         _rebuild_index(
             str(self.output_folder),
             verbose=verbose,
-            output_formats=["obsidian"]
+            output_formats=output_formats,
+            limit=limit,
+            repo_path=".",
         )
         
         return filepath
@@ -123,7 +134,20 @@ def main(args: dict) -> int:
     Args:
         args: Dictionary of CLI arguments
     """
-    processor = TestProcessor(args.get('outputfolder', 'output'))
+    repo_path = '.'
+
+    # Resolve verbosity from CLI/config/defaults
+    verbose = get_config_value('verbose', args, repo_path, False)
+
+    if verbose:
+        print_active_config(args, repo_path)
+    
+    output_folder = get_config_value('outputfolder', args, repo_path, 'devlog')
+    
+    # Determine output formats from config and CLI
+    output_formats = get_output_format(args, repo_path)
+    
+    processor = TestProcessor(output_folder)
     processor.setup_directories()
     
     try:
@@ -131,15 +155,17 @@ def main(args: dict) -> int:
         output = processor.read_input(args.get('input'))
         
         # Process and generate markdown
-        raw_output = bool(args.get("raw_output", False))
+        raw_output = bool(get_raw_output(args, repo_path, False))
         filepath = processor.process_test_output(
             output, 
-            verbose=args.get('verbose', False),
+            verbose=verbose,
             raw_output=raw_output,
             build_devlog=args.get("devlog", False),
+            limit=args.get('limit'),
+            output_formats=output_formats,
         )
         
-        if not args.get('verbose'):
+        if not verbose:
             print(f"Test results saved to: {filepath}")
         
         return 0
@@ -149,7 +175,7 @@ def main(args: dict) -> int:
         return 1
     except Exception as e:
         print(f"Error processing test output: {e}", file=sys.stderr)
-        if args.get('verbose'):
+        if verbose:
             import traceback
             traceback.print_exc()
         return 1
