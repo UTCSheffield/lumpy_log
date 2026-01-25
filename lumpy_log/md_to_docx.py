@@ -447,6 +447,20 @@ def _render_code_as_image_and_insert(doc, code: str, language: str = "", width_i
         os.unlink(tmp.name)
 
 
+def _sanitize_xml_string(s: str) -> str:
+    """Remove characters not allowed in XML 1.0 (python-docx requirement)."""
+    # Remove control characters except for tab, newline, carriage return
+    return ''.join(
+        c for c in s
+        if (
+            c == '\t' or c == '\n' or c == '\r' or
+            (0x20 <= ord(c) <= 0xD7FF) or
+            (0xE000 <= ord(c) <= 0xFFFD) or
+            (0x10000 <= ord(c) <= 0x10FFFF)
+        )
+    )
+
+
 def markdown_to_docx(markdown_content: str, output_path: str, render_code_as_images: bool = False, hcti_user_id: str = None, hcti_api_key: str = None) -> bool:
     """Convert markdown content to DOCX file.
     
@@ -462,6 +476,8 @@ def markdown_to_docx(markdown_content: str, output_path: str, render_code_as_ima
     Returns:
         True if conversion succeeded, False otherwise
     """
+    # Sanitize input for XML compatibility
+    markdown_content = _sanitize_xml_string(markdown_content)
     doc = Document()
     
     # Configure page size and margins
@@ -621,6 +637,7 @@ def markdown_file_to_docx(markdown_file: str, output_file: str = None, render_co
     
     try:
         content = md_path.read_text(encoding='utf-8')
+        content = _sanitize_xml_string(content)
         return markdown_to_docx(content, output_file, render_code_as_images, hcti_user_id, hcti_api_key)
     except Exception as e:
         print(f"Error reading markdown file: {e}")
