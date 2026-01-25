@@ -118,7 +118,7 @@ def _generate_obsidian_index(output_folder: str, items: list, verbose: bool = Fa
     }))
     
     index_path.write_text(index_content, encoding="utf-8")
-    if verbose:
+    if True or verbose:
         print(f"Updated index: {index_path}")
     
     return {"obsidian": str(index_path)}
@@ -241,7 +241,7 @@ def _rebuild_index(
     
     results = {}
     
-    if verbose:
+    if True or verbose:
         print(f"Rebuilding index with formats: {output_formats}")
     
     # Collect items
