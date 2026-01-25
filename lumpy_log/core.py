@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+
 import yaml
 from jinja2 import Environment, FileSystemLoader
 from genericpath import exists
@@ -9,12 +10,14 @@ from pydriller import Repository
 from .changelump import ChangeLump
 from .languages import Languages
 from .test_processor import TestProcessor
-from .utils import _get_templates_dir, _format_markdown
+from .utils import _get_templates_dir, _format_markdown, _rebuild_index
+from .config import get_output_format, get_config_value, print_active_config
+from . import OUTPUT_CHANGELOGS_DIR
 
 languages = Languages(os.path.join(os.path.dirname(os.path.abspath(__file__)), "languages.yml"))
 
 jinja_env = Environment(loader=FileSystemLoader(_get_templates_dir()))
-tCommit = jinja_env.get_template("commit.md")
+tCommit = jinja_env.get_template("commit_entry.md")
 tModifiedFiles = jinja_env.get_template("modified_files.md")
 tObsidianIndex = jinja_env.get_template("obsidian_index.md")
 
@@ -52,6 +55,15 @@ def _load_lumpy_ignore(repo_path: str):
 
 
 def main(args):
+    # Show active configuration if verbose
+    repo_path = args.get('repo', '.')
+    verbose = get_config_value('verbose', args, repo_path, False)
+    outputfolder = get_config_value('outputfolder', args, repo_path, 'devlog')
+
+    # Show active configuration if verbose
+    if verbose:
+        print_active_config(args, repo_path)
+
     kwargs = {}
     for param in args.keys():
         if not param in [
@@ -59,28 +71,26 @@ def main(args):
             "outputfolder",
             "force",
             "verbose",
-            "allbranches",
-            "branch",
             "repo",
-            "obsidian_index",
             "single_file",
             "devlog",
             "command",
             "input",
             "HCTI_API_USER_ID",
             "HCTI_API_KEY",
+            "limit",  # limit is for index generation, not pydriller
         ]:
             if args[param]:
                 kwargs[param] = args[param]
 
     # Only create the output directory when not a dry run
     if not args.get('dryrun'):
-        if not exists(args['outputfolder']):
-            os.makedirs(args['outputfolder'])
-        # Create commits subdirectory
-        commits_dir = os.path.join(args['outputfolder'], 'commits')
-        if not exists(commits_dir):
-            os.makedirs(commits_dir)
+        if not exists(outputfolder):
+            os.makedirs(outputfolder)
+        # Create change_logs subdirectory
+        change_logs_dir = os.path.join(outputfolder, OUTPUT_CHANGELOGS_DIR)
+        if not exists(change_logs_dir):
+            os.makedirs(change_logs_dir)
 
     commits = []
 
@@ -88,19 +98,34 @@ def main(args):
     #return
 
     # Build ignore spec once per run
-    ignore_spec = _load_lumpy_ignore(args['repo'])
-
-    for commit in Repository(args['repo'], **kwargs).traverse_commits():
-        if(args["allbranches"] or (
-            (args["branch"] is None and commit.in_main_branch)
-            or (args["branch"] in commit.branches) 
-        )):
+    ignore_spec = _load_lumpy_ignore(repo_path)
+    output_formats = get_output_format(args, repo_path)
+    
+    # Detect current branch
+    import subprocess
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            cwd=repo_path,
+            capture_output=True,
+            text=True
+        )
+        current_branch = result.stdout.strip() if result.returncode == 0 else "unknown"
+    except Exception:
+        current_branch = "unknown"
+    
+    # Report branch processing info if verbose
+    if verbose:
+        print(f"Processing current branch: {current_branch}")
+    
+    for commit in Repository(repo_path, **kwargs).traverse_commits():
+        if commit.in_main_branch:
             genfilename = commit.author_date.strftime("%Y%m%d_%H%M")+"_"+commit.hash[:7]
-            commits_dir = os.path.join(args['outputfolder'], 'commits')
-            genfilepath = os.path.join(commits_dir, genfilename+".md")
+            change_logs_dir = os.path.join(outputfolder, OUTPUT_CHANGELOGS_DIR)
+            genfilepath = os.path.join(change_logs_dir, genfilename+".md")
             
             if(args["force"] or not os.path.exists(genfilepath)):
-                if(args["verbose"]):
+                if verbose:
                     print("Making", genfilepath)
                 newcommit = {
                     "hash":commit.hash,
@@ -118,7 +143,7 @@ def main(args):
                         # Skip files that match .lumpyignore patterns
                         try:
                             if ignore_spec and ignore_spec.match_file(m.filename):
-                                if(args["verbose"]):
+                                if verbose:
                                     print(f"Ignoring per .lumpyignore: {m.filename}")
                                 continue
                         except Exception:
@@ -146,19 +171,19 @@ def main(args):
                             if m.change_type.name == "MODIFY":
                                 lines = str.splitlines(m.source_code)
                                     
-                                if(False and args["verbose"]):
+                                if False and verbose:
                                     print ("m.changed_methods", m.changed_methods)
                                 if (len(m.changed_methods)):
                                     for c in m.changed_methods:
                                         newfunc = c.__dict__
-                                        lump = ChangeLump(language, lines, func=c.__dict__, verbose=args["verbose"])
+                                        lump = ChangeLump(language, lines, func=c.__dict__, verbose=verbose)
                                         lump.extendOverComments()
                                         newfunccode = lump.code
                                         newmod["source"] = "changed_methods"
                                         newmod["code"].append(newfunccode)
                                         newmod["lumps"].append(lump)
                                 else:
-                                    if(False and args["verbose"]):
+                                    if False and verbose:
                                         print ("Change m", m.diff_parsed)
                                     
                                     newmod["source"] = "line change"
@@ -167,16 +192,16 @@ def main(args):
                                     lumps = []
                                     for (linenum, linetext) in m.diff_parsed["added"]:
                                         if lump is None:
-                                            lump = ChangeLump(language, lines, start=linenum, verbose=args["verbose"])
+                                            lump = ChangeLump(language, lines, start=linenum, verbose=verbose)
                                             lump.extendOverText()
                                             lumps.append(lump)    
                                         if(not lump.inLump(linenum-1)):
-                                            lump = ChangeLump(language, lines, start=linenum, verbose=args["verbose"])
+                                            lump = ChangeLump(language, lines, start=linenum, verbose=verbose)
                                             lump.extendOverText()
                                             lumps.append(lump)
                                     
                                     for lump in lumps:
-                                        if(False and args["verbose"]):
+                                        if False and verbose:
                                             print("lump.code", lump.code)
                                         newmod["code"].append(lump.code)
                                         newmod["lumps"].append(lump)
@@ -189,24 +214,26 @@ def main(args):
                 
                 # Normalize whitespace before saving
                 newcommit["markdown"] = _format_markdown(newcommit["markdown"])
-                commits.append(newcommit)
                 
-                if(not args["dryrun"]):
-                    with open( genfilepath, "w") as file1:
-                        # Writing data to a file
-                        #file1.write("\n\n".join(newcommit["markdown"]))
-                        file1.write(newcommit["markdown"])
+                # Write the commit file to disk (unless dry run)
+                if not args.get("dryrun"):
+                    with open(genfilepath, "w", encoding="utf-8") as f:
+                        f.write(newcommit["markdown"])
+                    if verbose:
+                        print(f"Wrote {genfilepath}")
+                
+                commits.append(newcommit)
     
     # Rebuild index after processing commits
-    should_build_index = args.get("obsidian_index", True)
-    should_build_devlog = args.get("devlog", False)
 
-    if not args["dryrun"] and (should_build_index or should_build_devlog):
-        processor = TestProcessor(args['outputfolder'])
-        processor._rebuild_index(
-            verbose=args.get("verbose", False),
-            build_devlog=should_build_devlog,
-            write_index=should_build_index,
+    if not args["dryrun"]:
+        _rebuild_index(
+                        outputfolder,
+                        verbose=verbose,
+                        output_formats=output_formats,
+                        current_branch=current_branch,
+                        limit=get_config_value("limit", args, repo_path, None),
+                        repo_path=repo_path,
         )
 
 

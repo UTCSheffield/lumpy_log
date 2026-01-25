@@ -3,7 +3,7 @@ from lumpy_log.list1 import list1
 
 class ChangeLump(object):
     def __init__(self, lang, lines, start=None, end=None, func=None, verbose=False):
-        self.verbose = verbose
+        self.verbose = False and verbose
         self.lang = lang
         self.lines = list1(lines)
         self.commentStart = None

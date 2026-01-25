@@ -1,0 +1,80 @@
+# Lumpy Log Configuration File
+# Place this file as .lumpyconfig.yml in your repository root
+# All settings are optional - defaults will be used if not specified
+
+# =============================================================================
+# OUTPUT SETTINGS
+# =============================================================================
+
+# Output format(s): obsidian, devlog, docx
+# Can be a single value or a list
+# Default: obsidian
+output_format:
+  - obsidian
+  # - devlog
+  # - docx
+
+# Output folder for generated files
+# Default: devlog
+outputfolder: devlog
+
+# =============================================================================
+# DOCX RENDERING
+# =============================================================================
+
+# Render code blocks as images in DOCX output (default: false)
+# When enabled:
+#  - If HCTI credentials are configured, uses htmlcsstoimage.com API
+#  - Otherwise, falls back to local Playwright rendering (requires: pip install "lumpy-log[docx-images]" && playwright install chromium)
+#  - If both unavailable, uses text rendering with syntax highlighting
+# render_code_as_images: true
+
+# HCTI API credentials for rendering code blocks as images in DOCX
+# Get free credentials at https://htmlcsstoimage.com
+# Environment variables (HCTI_API_USER_ID, HCTI_API_KEY) take precedence
+# Only used when render_code_as_images is true
+# Default: not set (falls back to Playwright if render_code_as_images is true)
+# hcti_api_user_id: "your-user-id"
+# hcti_api_key: "your-api-key"
+
+# =============================================================================
+# CONTENT FILTERING
+# =============================================================================
+
+# Limit the number of entries in index/devlog to N most recent
+# Useful during development to keep files manageable
+# Default: no limit (all entries)
+# limit: 10
+
+# =============================================================================
+# INDEX SETTINGS
+# =============================================================================
+
+# Use changelog order (newest first) instead of default (oldest first)
+# Default: false
+changelog: false
+
+# =============================================================================
+# VERBOSITY
+# =============================================================================
+
+# Enable verbose output (detailed progress messages)
+# Default: false
+verbose: false
+
+# =============================================================================
+# TEST OUTPUT SETTINGS
+# =============================================================================
+
+# Include raw test output in test result markdown
+# Default: false
+raw_test_output: false
+
+# =============================================================================
+# GIT SETTINGS
+# =============================================================================
+
+# Force overwrite existing commit files
+# Default: false
+# force: false
+

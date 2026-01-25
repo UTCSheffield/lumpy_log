@@ -5,15 +5,18 @@ import sys
 import os
 from datetime import datetime
 from pathlib import Path
+from . import OUTPUT_TESTRESULTS_DIR
 from jinja2 import Environment, FileSystemLoader
 from .tap_parser import parse_test_output
-from .utils import _clean_markdown, _get_templates_dir, _format_markdown
+from .utils import _clean_markdown, _get_templates_dir, _format_markdown, _rebuild_index
+from .config import print_active_config, get_output_format, get_config_value, get_raw_output
+
 class TestProcessor:
     """Process test output and generate markdown files"""
     
-    def __init__(self, output_folder: str = "output"):
-        self.output_folder = Path(output_folder)
-        self.tests_dir = self.output_folder / "tests"
+    def __init__(self, output_folder: str = "devlog"):
+        self.output_folder = Path(output_folder or "devlog")
+        self.tests_dir = self.output_folder / OUTPUT_TESTRESULTS_DIR
         
         # Set up Jinja2 environment
         self.jinja_env = Environment(loader=FileSystemLoader(_get_templates_dir()))
@@ -65,6 +68,8 @@ class TestProcessor:
         verbose: bool = False,
         raw_output: bool = False,
         build_devlog: bool = False,
+        limit: int = None,
+        output_formats: list = None,
     ) -> Path:
         """
         Process test output and generate markdown file
@@ -73,10 +78,15 @@ class TestProcessor:
             output: Test output string
             verbose: Print progress messages
             raw_output: Include raw output in the markdown report
+            output_formats: List of output formats (e.g., ['obsidian', 'docx'])
             
         Returns:
             Path to generated markdown file
         """
+        # Use provided formats or default to obsidian
+        if output_formats is None:
+            output_formats = ["obsidian"]
+        
         # Parse test output
         test_data = parse_test_output(output)
         
@@ -108,105 +118,16 @@ class TestProcessor:
                 print(f"  Skipped: {test_data['tests_skipped']}")
         
         # Rebuild index to include new test results
-        self._rebuild_index(verbose, build_devlog=build_devlog)
+        _rebuild_index(
+            str(self.output_folder),
+            verbose=verbose,
+            output_formats=output_formats,
+            limit=limit,
+            repo_path=".",
+        )
         
         return filepath
     
-    def _rebuild_index(
-        self,
-        verbose: bool = False,
-        changelog_order: bool = False,
-        build_devlog: bool = False,
-        write_index: bool = True,
-    ):
-        """Rebuild the unified index with commits and tests interleaved by time.
-
-        Args:
-            verbose: Print progress messages
-            changelog_order: If True, sort newest first (changelog style). If False (default), oldest first
-            build_devlog: When True, also emit a combined devlog.md containing the full contents
-                of each commit and test entry in the chosen order.
-            write_index: When False, skip writing index.md (used when only devlog is requested).
-        """
-        # Collect commit files
-        commits_dir = self.output_folder / "commits"
-        commit_files = []
-        if commits_dir.exists():
-            commit_files = sorted(commits_dir.glob("*.md"))
-        
-        # Collect test files
-        test_files = []
-        if self.tests_dir.exists():
-            test_files = sorted(self.tests_dir.glob("*.md"))
-        
-        # Create combined list with type markers
-        items = []
-        for f in commit_files:
-            items.append({"path": f"commits/{f.name}", "name": f.stem, "type": "commit", "filename": f.name})
-        for f in test_files:
-            items.append({"path": f"tests/{f.name}", "name": f.stem, "type": "test", "filename": f.name})
-        
-        # Sort by filename (which includes timestamp)
-        # Default (changelog_order=False): oldest first
-        # If changelog_order=True: newest first
-        items.sort(key=lambda x: x['filename'], reverse=changelog_order)
-        
-        index_path = self.output_folder / "index.md"
-        if write_index:
-            template = self.jinja_env.get_template("obsidian_index.md")
-            index_content = _clean_markdown(template.render({
-                "generation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "repo_path": ".",
-                "items": items,
-                "total_items": len(items),
-                "total_commits": len(commit_files),
-                "total_tests": len(test_files)
-            }))
-
-            with open(index_path, 'w', encoding='utf-8') as f:
-                f.write(index_content)
-
-            if verbose:
-                print(f"Updated index: {index_path}")
-                print(f"Order: {'Changelog (newest first)' if changelog_order else 'Development log (oldest first)'}")
-        elif verbose:
-            print("Index generation skipped (obsidian index disabled)")
-        
-        if build_devlog:
-            devlog_path = self.output_folder / "devlog.md"
-            header_lines = [
-                "# Devlog",
-                "",
-                datetime.now().strftime("Generated: %Y-%m-%d %H:%M:%S"),
-                f"Items: {len(items)} ({len(commit_files)} commits, {len(test_files)} tests)",
-                "",
-            ]
-
-            segments = []
-            for item in items:
-                entry_path = self.output_folder / item["path"]
-                try:
-                    entry_text = entry_path.read_text(encoding="utf-8").strip()
-                except FileNotFoundError:
-                    if verbose:
-                        print(f"Missing item skipped in devlog: {entry_path}")
-                    continue
-                segments.append(entry_text)
-
-            devlog_body = "\n\n".join(segments)
-            devlog_content_parts = header_lines.copy()
-            if devlog_body:
-                devlog_content_parts.append(devlog_body)
-            devlog_path.write_text(_clean_markdown("\n".join(devlog_content_parts)), encoding="utf-8")
-
-            if verbose:
-                print(f"Built devlog: {devlog_path}")
-
-        if verbose and not write_index:
-            print(f"Order: {'Changelog (newest first)' if changelog_order else 'Development log (oldest first)'}")
-
-
-
 def main(args: dict) -> int:
     """
     Main entry point for test processing
@@ -214,7 +135,20 @@ def main(args: dict) -> int:
     Args:
         args: Dictionary of CLI arguments
     """
-    processor = TestProcessor(args.get('outputfolder', 'output'))
+    repo_path = '.'
+
+    # Resolve verbosity from CLI/config/defaults
+    verbose = get_config_value('verbose', args, repo_path, False)
+
+    if verbose:
+        print_active_config(args, repo_path)
+    
+    output_folder = get_config_value('outputfolder', args, repo_path, 'devlog')
+    
+    # Determine output formats from config and CLI
+    output_formats = get_output_format(args, repo_path)
+    
+    processor = TestProcessor(output_folder)
     processor.setup_directories()
     
     try:
@@ -222,15 +156,17 @@ def main(args: dict) -> int:
         output = processor.read_input(args.get('input'))
         
         # Process and generate markdown
-        raw_output = bool(args.get("raw_output", False))
+        raw_output = bool(get_raw_output(args, repo_path, False))
         filepath = processor.process_test_output(
             output, 
-            verbose=args.get('verbose', False),
+            verbose=verbose,
             raw_output=raw_output,
             build_devlog=args.get("devlog", False),
+            limit=args.get('limit'),
+            output_formats=output_formats,
         )
         
-        if not args.get('verbose'):
+        if not verbose:
             print(f"Test results saved to: {filepath}")
         
         return 0
@@ -240,7 +176,7 @@ def main(args: dict) -> int:
         return 1
     except Exception as e:
         print(f"Error processing test output: {e}", file=sys.stderr)
-        if args.get('verbose'):
+        if verbose:
             import traceback
             traceback.print_exc()
         return 1
