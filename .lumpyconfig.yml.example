@@ -50,14 +50,6 @@ outputfolder: devlog
 # INDEX SETTINGS
 # =============================================================================
 
-# Generate Obsidian-style index.md file
-# Default: true
-obsidian_index: true
-
-# Generate combined devlog.md file
-# Default: false
-devlog: false
-
 # Use changelog order (newest first) instead of default (oldest first)
 # Default: false
 changelog: false

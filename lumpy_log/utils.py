@@ -1,6 +1,21 @@
 import os
 import re
 from pathlib import Path
+from . import OUTPUT_JOURNAL_DIR, OUTPUT_CHANGELOGS_DIR, OUTPUT_TESTRESULTS_DIR
+from . import ITEM_TYPE_CHANGELOG, ITEM_TYPE_TEST, ITEM_TYPE_ENTRY
+
+# Export for external use
+__all__ = [
+    "_get_templates_dir",
+    "_clean_markdown",
+    "_format_markdown",
+    "_collect_items",
+    "_generate_obsidian_index",
+    "_generate_devlog",
+    "_generate_docx",
+    "_rebuild_index",
+]
+
 from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 import mdformat
@@ -29,7 +44,7 @@ def _collect_items(output_folder: str, changelog_order: bool = False, limit: int
     """Collect and organize commit and test items from output folder.
     
     Args:
-        output_folder: Base output folder containing commits/, tests/, entries/
+        output_folder: Base output folder containing change_logs/, test_results/, journal/
         changelog_order: If True, sort newest first. If False (default), oldest first
         limit: If specified, limit to N most recent entries
     
@@ -37,23 +52,23 @@ def _collect_items(output_folder: str, changelog_order: bool = False, limit: int
         Tuple of (items_list, commit_files, test_files, entry_files, total_before_limit)
     """
     output_path = Path(output_folder)
-    commits_dir = output_path / "commits"
-    tests_dir = output_path / "tests"
-    entries_dir = output_path / "entries"
+    commits_dir = output_path / OUTPUT_CHANGELOGS_DIR
+    tests_dir = output_path / OUTPUT_TESTRESULTS_DIR
+    entries_dir = output_path / OUTPUT_JOURNAL_DIR
     
     # Collect files
-    commit_files = sorted(commits_dir.glob("*.md")) if commits_dir.exists() else []
-    test_files = sorted(tests_dir.glob("*.md")) if tests_dir.exists() else []
-    entry_files = sorted(entries_dir.glob("*.md")) if entries_dir.exists() else []
+    change_log_files = sorted(commits_dir.glob("*.md")) if commits_dir.exists() else []
+    test_result_files = sorted(tests_dir.glob("*.md")) if tests_dir.exists() else []
+    journal_files = sorted(entries_dir.glob("*.md")) if entries_dir.exists() else []
     
     # Create combined list with type markers
     items = []
-    for f in commit_files:
-        items.append({"path": f"commits/{f.name}", "name": f.stem, "type": "commit", "filename": f.name})
-    for f in test_files:
-        items.append({"path": f"tests/{f.name}", "name": f.stem, "type": "test", "filename": f.name})
-    for f in entry_files:
-        items.append({"path": f"entries/{f.name}", "name": f.stem, "type": "entry", "filename": f.name})
+    for f in change_log_files:
+        items.append({"path": f"{OUTPUT_CHANGELOGS_DIR}/{f.name}", "name": f.stem, "type": ITEM_TYPE_CHANGELOG, "filename": f.name})
+    for f in test_result_files:
+        items.append({"path": f"{OUTPUT_TESTRESULTS_DIR}/{f.name}", "name": f.stem, "type": ITEM_TYPE_TEST, "filename": f.name})
+    for f in journal_files:
+        items.append({"path": f"{OUTPUT_JOURNAL_DIR}/{f.name}", "name": f.stem, "type": ITEM_TYPE_ENTRY, "filename": f.name})
     
     items.sort(key=lambda x: x['filename'], reverse=changelog_order)
     
@@ -67,7 +82,7 @@ def _collect_items(output_folder: str, changelog_order: bool = False, limit: int
         else:
             items = items[-limit:]
     
-    return items, commit_files, test_files, entry_files, total_before_limit
+    return items, change_log_files, test_result_files, journal_files, total_before_limit
 
 def _generate_obsidian_index(output_folder: str, items: list, verbose: bool = False, current_branch: str = None) -> dict:
     """Generate Obsidian index from items.
@@ -82,9 +97,9 @@ def _generate_obsidian_index(output_folder: str, items: list, verbose: bool = Fa
         Dict with "obsidian" key pointing to index path
     """
     output_path = Path(output_folder)
-    commit_count = sum(1 for item in items if item["type"] == "commit")
-    test_count = sum(1 for item in items if item["type"] == "test")
-    entry_count = sum(1 for item in items if item["type"] == "entry")
+    commit_count = sum(1 for item in items if item["type"] == ITEM_TYPE_CHANGELOG)
+    test_count = sum(1 for item in items if item["type"] == ITEM_TYPE_TEST)
+    entry_count = sum(1 for item in items if item["type"] == ITEM_TYPE_ENTRY)
     
     # Set up Jinja2 for templates
     jinja_env = Environment(loader=FileSystemLoader(_get_templates_dir()))
@@ -121,9 +136,9 @@ def _generate_devlog(output_folder: str, items: list, verbose: bool = False, cur
         Dict with "devlog" key pointing to devlog path
     """
     output_path = Path(output_folder)
-    commit_count = sum(1 for item in items if item["type"] == "commit")
-    test_count = sum(1 for item in items if item["type"] == "test")
-    entry_count = sum(1 for item in items if item["type"] == "entry")
+    commit_count = sum(1 for item in items if item["type"] == ITEM_TYPE_CHANGELOG)
+    test_count = sum(1 for item in items if item["type"] == ITEM_TYPE_TEST)
+    entry_count = sum(1 for item in items if item["type"] == ITEM_TYPE_ENTRY)
     
     header_lines = [
         "# Devlog",

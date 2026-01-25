@@ -5,6 +5,7 @@ import sys
 import os
 from datetime import datetime
 from pathlib import Path
+from . import OUTPUT_TESTRESULTS_DIR
 from jinja2 import Environment, FileSystemLoader
 from .tap_parser import parse_test_output
 from .utils import _clean_markdown, _get_templates_dir, _format_markdown, _rebuild_index
@@ -15,7 +16,7 @@ class TestProcessor:
     
     def __init__(self, output_folder: str = "devlog"):
         self.output_folder = Path(output_folder or "devlog")
-        self.tests_dir = self.output_folder / "tests"
+        self.tests_dir = self.output_folder / OUTPUT_TESTRESULTS_DIR
         
         # Set up Jinja2 environment
         self.jinja_env = Environment(loader=FileSystemLoader(_get_templates_dir()))

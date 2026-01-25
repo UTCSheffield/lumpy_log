@@ -11,8 +11,6 @@ VALID_FORMATS = {"obsidian", "devlog", "docx"}
 DEFAULTS = {
     'output_format': DEFAULT_OUTPUT_FORMAT,
     'outputfolder': 'devlog',
-    'obsidian_index': True,
-    'devlog': False,
     'changelog': False,
     'verbose': False,
     'raw_output': False,
@@ -160,8 +158,6 @@ def print_active_config(args: dict, repo_path: str = "."):
         ('outputfolder', 'Output folder'),
         ('verbose', 'Verbose mode'),
         ('limit', 'Entry limit'),
-        ('obsidian_index', 'Generate Obsidian index'),
-        ('devlog', 'Generate devlog'),
         ('changelog', 'Changelog order'),
         ('render_code_as_images', 'Code blocks as images'),
         ('force', 'Force overwrite'),

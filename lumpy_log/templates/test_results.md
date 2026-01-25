@@ -1,4 +1,6 @@
-## Test Results : {{ generation_date }}
+
+# Test Results
+Date: {{ generation_date }}
 <!-- **Format:** {{ format }} -->
 
 {% if format == 'tap' %}

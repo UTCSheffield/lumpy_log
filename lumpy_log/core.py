@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+
 import yaml
 from jinja2 import Environment, FileSystemLoader
 from genericpath import exists
@@ -11,11 +12,12 @@ from .languages import Languages
 from .test_processor import TestProcessor
 from .utils import _get_templates_dir, _format_markdown, _rebuild_index
 from .config import get_output_format, get_config_value, print_active_config
+from . import OUTPUT_CHANGELOGS_DIR
 
 languages = Languages(os.path.join(os.path.dirname(os.path.abspath(__file__)), "languages.yml"))
 
 jinja_env = Environment(loader=FileSystemLoader(_get_templates_dir()))
-tCommit = jinja_env.get_template("commit.md")
+tCommit = jinja_env.get_template("commit_entry.md")
 tModifiedFiles = jinja_env.get_template("modified_files.md")
 tObsidianIndex = jinja_env.get_template("obsidian_index.md")
 
@@ -70,7 +72,6 @@ def main(args):
             "force",
             "verbose",
             "repo",
-            "obsidian_index",
             "single_file",
             "devlog",
             "command",
@@ -86,10 +87,10 @@ def main(args):
     if not args.get('dryrun'):
         if not exists(outputfolder):
             os.makedirs(outputfolder)
-        # Create commits subdirectory
-        commits_dir = os.path.join(outputfolder, 'commits')
-        if not exists(commits_dir):
-            os.makedirs(commits_dir)
+        # Create change_logs subdirectory
+        change_logs_dir = os.path.join(outputfolder, OUTPUT_CHANGELOGS_DIR)
+        if not exists(change_logs_dir):
+            os.makedirs(change_logs_dir)
 
     commits = []
 
@@ -120,8 +121,8 @@ def main(args):
     for commit in Repository(repo_path, **kwargs).traverse_commits():
         if commit.in_main_branch:
             genfilename = commit.author_date.strftime("%Y%m%d_%H%M")+"_"+commit.hash[:7]
-            commits_dir = os.path.join(outputfolder, 'commits')
-            genfilepath = os.path.join(commits_dir, genfilename+".md")
+            change_logs_dir = os.path.join(outputfolder, OUTPUT_CHANGELOGS_DIR)
+            genfilepath = os.path.join(change_logs_dir, genfilename+".md")
             
             if(args["force"] or not os.path.exists(genfilepath)):
                 if verbose:
@@ -224,10 +225,8 @@ def main(args):
                 commits.append(newcommit)
     
     # Rebuild index after processing commits
-    should_build_index = get_config_value("obsidian_index", args, repo_path, True)
-    should_build_devlog = get_config_value("devlog", args, repo_path, False)
 
-    if not args["dryrun"] and (should_build_index or should_build_devlog or "docx" in output_formats):
+    if not args["dryrun"]:
         _rebuild_index(
                         outputfolder,
                         verbose=verbose,

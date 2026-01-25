@@ -3,6 +3,9 @@
 import os
 from pathlib import Path
 import pytest
+from lumpy_log import OUTPUT_CHANGELOGS_DIR, OUTPUT_TESTRESULTS_DIR, OUTPUT_JOURNAL_DIR
+from lumpy_log import ITEM_TYPE_CHANGELOG, ITEM_TYPE_TEST, ITEM_TYPE_ENTRY
+
 from lumpy_log.utils import (
     _get_templates_dir,
     _clean_markdown,
@@ -114,70 +117,70 @@ class TestCollectItems:
         """Should return a tuple of (items, commits, tests)."""
         result = _collect_items("/tmp")
         assert isinstance(result, tuple)
-        assert len(result) == 4
+        assert len(result) == 5
 
     def test_empty_folder(self, tmp_path):
         """Should handle empty folder gracefully."""
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
         assert items == []
-        assert commits == []
-        assert tests == []
-        assert total == 0
-
+        assert change_log_files == []
+        assert test_result_files == []
+        assert journal_files == []
+        assert total_before_limit == 0
+        
     def test_collects_commits(self, tmp_path):
         """Should collect markdown files from commits/ directory."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
-        assert len(commits) == 1
-        assert commits[0].name == "20240101_1200_test.md"
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
+        assert len(change_log_files) == 1
+        assert change_log_files[0].name == "20240101_1200_test.md"
 
     def test_collects_tests(self, tmp_path):
         """Should collect markdown files from tests/ directory."""
-        tests_dir = tmp_path / "tests"
+        tests_dir = tmp_path / OUTPUT_TESTRESULTS_DIR
         tests_dir.mkdir()
         (tests_dir / "20240101_1200_test.md").write_text("content")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
-        assert len(tests) == 1
-        assert tests[0].name == "20240101_1200_test.md"
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
+        assert len(test_result_files) == 1
+        assert test_result_files[0].name == "20240101_1200_test.md"
 
     def test_items_have_required_fields(self, tmp_path):
         """Items should have path, name, type, and filename."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_commit.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_commit.md").write_text("content")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
         assert len(items) == 1
         item = items[0]
         assert "path" in item
         assert "name" in item
         assert "type" in item
         assert "filename" in item
-        assert item["type"] == "commit"
+        assert item["type"] == ITEM_TYPE_CHANGELOG
 
     def test_sorts_oldest_first_by_default(self, tmp_path):
         """Should sort by filename, oldest first by default."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240102_1200_test.md").write_text("content")
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240102_1200_test.md").write_text("content")
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
-        items, commits, tests, total = _collect_items(str(tmp_path), changelog_order=False)
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path), changelog_order=False)
         assert items[0]["filename"] == "20240101_1200_test.md"
         assert items[1]["filename"] == "20240102_1200_test.md"
 
     def test_sorts_newest_first_with_changelog_order(self, tmp_path):
         """Should sort newest first when changelog_order=True."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
-        (commits_dir / "20240102_1200_test.md").write_text("content")
-
-        items, commits, tests, total = _collect_items(str(tmp_path), changelog_order=True)
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
+        (change_logs_dir / "20240102_1200_test.md").write_text("content")
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path), changelog_order=True)
         assert items[0]["filename"] == "20240102_1200_test.md"
         assert items[1]["filename"] == "20240101_1200_test.md"
 
@@ -187,11 +190,11 @@ class TestGenerateObsidianIndex:
 
     def test_creates_index_file(self, tmp_path):
         """Should create index.md file."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_commit.md").write_text("# Commit\nContent")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_commit.md").write_text("# Commit\nContent")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
         result = _generate_obsidian_index(str(tmp_path), items)
 
         assert "obsidian" in result
@@ -199,11 +202,11 @@ class TestGenerateObsidianIndex:
 
     def test_index_contains_items(self, tmp_path):
         """Generated index should reference the items."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_mycommit.md").write_text("# My Commit")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_mycommit.md").write_text("# My Commit")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
         _generate_obsidian_index(str(tmp_path), items)
 
         index_content = (tmp_path / "index.md").read_text(encoding="utf-8")
@@ -212,11 +215,11 @@ class TestGenerateObsidianIndex:
 
     def test_returns_dict_with_obsidian_key(self, tmp_path):
         """Should return dict with obsidian key."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
         result = _generate_obsidian_index(str(tmp_path), items)
 
         assert isinstance(result, dict)
@@ -229,11 +232,12 @@ class TestGenerateDevlog:
 
     def test_creates_devlog_file(self, tmp_path):
         """Should create devlog.md file."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_commit.md").write_text("# Commit\nBody")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_commit.md").write_text("# Commit\nBody")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
+        
         result = _generate_devlog(str(tmp_path), items)
 
         assert "devlog" in result
@@ -241,11 +245,11 @@ class TestGenerateDevlog:
 
     def test_devlog_contains_content(self, tmp_path):
         """Devlog should contain item content."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_commit.md").write_text("# Commit\nTest body")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_commit.md").write_text("# Commit\nTest body")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
         _generate_devlog(str(tmp_path), items)
 
         devlog_content = (tmp_path / "devlog.md").read_text(encoding="utf-8")
@@ -254,15 +258,15 @@ class TestGenerateDevlog:
 
     def test_devlog_interleaves_commits_and_tests(self, tmp_path):
         """Devlog should include both commits and tests in order."""
-        commits_dir = tmp_path / "commits"
-        tests_dir = tmp_path / "tests"
-        commits_dir.mkdir()
-        tests_dir.mkdir()
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        test_results_dir = tmp_path / OUTPUT_TESTRESULTS_DIR
+        change_logs_dir.mkdir()
+        test_results_dir.mkdir()
 
-        (commits_dir / "20240101_1200_commit.md").write_text("# Commit 1")
-        (tests_dir / "20240102_1200_test.md").write_text("# Test 1")
+        (change_logs_dir / "20240101_1200_commit.md").write_text("# Commit 1")
+        (test_results_dir / "20240102_1200_test.md").write_text("# Test 1")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
         _generate_devlog(str(tmp_path), items)
 
         devlog_content = (tmp_path / "devlog.md").read_text(encoding="utf-8")
@@ -272,11 +276,11 @@ class TestGenerateDevlog:
 
     def test_devlog_has_header(self, tmp_path):
         """Devlog should have proper header with generation info."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
         _generate_devlog(str(tmp_path), items)
 
         devlog_content = (tmp_path / "devlog.md").read_text(encoding="utf-8")
@@ -286,11 +290,11 @@ class TestGenerateDevlog:
 
     def test_returns_dict_with_devlog_key(self, tmp_path):
         """Should return dict with devlog key."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
-        items, commits, tests, total = _collect_items(str(tmp_path))
+        items, change_log_files, test_result_files, journal_files, total_before_limit = _collect_items(str(tmp_path))
         result = _generate_devlog(str(tmp_path), items)
 
         assert isinstance(result, dict)
@@ -386,9 +390,9 @@ class TestRebuildIndex:
 
     def test_default_output_format_is_obsidian(self, tmp_path):
         """Should default to obsidian output format."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
         result = _rebuild_index(str(tmp_path))
 
@@ -397,9 +401,9 @@ class TestRebuildIndex:
 
     def test_obsidian_output_format(self, tmp_path):
         """Should generate obsidian index when requested."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
         result = _rebuild_index(str(tmp_path), output_formats=["obsidian"])
 
@@ -408,9 +412,9 @@ class TestRebuildIndex:
 
     def test_devlog_output_format(self, tmp_path):
         """Should generate devlog when requested."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
         result = _rebuild_index(str(tmp_path), output_formats=["devlog"])
 
@@ -421,9 +425,9 @@ class TestRebuildIndex:
 
     def test_multiple_output_formats(self, tmp_path):
         """Should handle multiple output formats."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
         result = _rebuild_index(str(tmp_path), output_formats=["obsidian", "devlog"])
 
@@ -434,9 +438,9 @@ class TestRebuildIndex:
 
     def test_devlog_and_docx_both_requested(self, tmp_path):
         """Should keep devlog.md when both devlog and docx are requested."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
         result = _rebuild_index(str(tmp_path), output_formats=["devlog", "docx"])
 
@@ -447,9 +451,9 @@ class TestRebuildIndex:
 
     def test_only_docx_removes_devlog_md(self, tmp_path):
         """Should remove devlog.md if only docx is requested."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
         result = _rebuild_index(str(tmp_path), output_formats=["docx"])
 
@@ -462,10 +466,10 @@ class TestRebuildIndex:
 
     def test_changelog_order_oldest_first(self, tmp_path):
         """Should order oldest first when changelog_order=False."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240102_1200_test.md").write_text("# Second")
-        (commits_dir / "20240101_1200_test.md").write_text("# First")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240102_1200_test.md").write_text("# Second")
+        (change_logs_dir / "20240101_1200_test.md").write_text("# First")
 
         result = _rebuild_index(str(tmp_path), changelog_order=False, output_formats=["devlog"])
 
@@ -474,10 +478,10 @@ class TestRebuildIndex:
 
     def test_changelog_order_newest_first(self, tmp_path):
         """Should order newest first when changelog_order=True."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("# First")
-        (commits_dir / "20240102_1200_test.md").write_text("# Second")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("# First")
+        (change_logs_dir / "20240102_1200_test.md").write_text("# Second")
 
         result = _rebuild_index(str(tmp_path), changelog_order=True, output_formats=["devlog"])
 
@@ -486,9 +490,9 @@ class TestRebuildIndex:
 
     def test_verbose_output(self, tmp_path, capsys):
         """Should print verbose messages when verbose=True."""
-        commits_dir = tmp_path / "commits"
-        commits_dir.mkdir()
-        (commits_dir / "20240101_1200_test.md").write_text("content")
+        change_logs_dir = tmp_path / OUTPUT_CHANGELOGS_DIR
+        change_logs_dir.mkdir()
+        (change_logs_dir / "20240101_1200_test.md").write_text("content")
 
         _rebuild_index(str(tmp_path), verbose=True)
 

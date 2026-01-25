@@ -24,31 +24,64 @@ pip install lumpy-log
 
 ### For Development
 
-```bash
-# Clone the repository
-git clone https://github.com/UTCSheffield/lumpy_log.git
-cd lumpy_log
-
-# Install in editable mode
-pip install -e .
-```
-
-### Optional: DOCX code blocks as images (no API)
-
-To enable local image rendering for code blocks in DOCX (Playwright fallback):
+#### Add a Dev Log Entry
 
 ```bash
-pip install "lumpy-log[docx-images]"
-playwright install chromium  # or firefox/webkit; export LUMPY_PLAYWRIGHT_BROWSER=firefox
-```
+# Add a new dev log entry
+lumpy-log log
 
-If you prefer API-based rendering, see [HCTI_SETUP.md](HCTI_SETUP.md).
+### Command-line Options
 
-## Usage
+#### Log Command (Dev Log Entry)
 
+- `-o, --outputfolder`: Output folder for dev log entries (default: devlog/)
+- `-t, --title`: Title to place in the log entry
+- `-f, --filename`: Optional filename for the log entry (default: YYYYMMDD.md)
+- `--force`: Overwrite existing log entry file if present
+- `-v, --verbose`: Verbose output
+- `--limit`: Limit index/devlog to N most recent entries
+- `--output-format`: Output format(s) (overrides .lumpyconfig.yml)
+
+#### Changes Command (Commit Logs)
+
+- `-i, --repo`: Path to the local Git repository (default: current directory)
+- `-o, --outputfolder`: Output folder for generated files (default: change_logs/)
+- `-f, --fromcommit`: Start from this commit
+- `-t, --tocommit`: End at this commit
+- `-v, --verbose`: Verbose output
+- `--force`: Force overwrite existing files
+- `-d, --dryrun`: Dry run - don't write files
+- `-n, --no-obsidian-index`: Don't generate Obsidian-style index.md file
+- `--devlog`: Generate a combined devlog.md with all commit and test content
+- `--limit`: Limit index/devlog to N most recent entries
+
+#### Test Command (Test Results)
+
+- `-o, --outputfolder`: Output folder for test results (default: test_results/)
+- `--input`: Input file with test output (if not specified, reads from stdin)
+- `-v, --verbose`: Verbose output
+- `--raw-test-output`: Include raw test output in the report
+- `--devlog`: Generate a combined devlog.md alongside index rebuild
+- `--limit`: Limit index/devlog to N most recent entries
+
+#### Rebuild Command (Regenerate Index)
+
+Rebuilds the unified `index.md` from existing logs, change logs, and test results without re-processing git history or re-running tests.
+
+```bash
+# Rebuild index with default order (oldest first)
 ### As a CLI Command
 
+# Rebuild with changelog order (newest first)
+
+
+# Rebuild from custom output folder
 After installation, you can use the `lumpy-log` command:
+```
+
+- `-o, --outputfolder`: Output folder containing logs/, change_logs/, and test_results/ (default: logs/)
+- `-v, --verbose`: Verbose output
+- `--changelog`: Use changelog order (newest first) instead of default (oldest first)
 
 #### Generate Git Commit Logs
 
@@ -105,15 +138,11 @@ Test results are saved to `output/tests/` with timestamp filenames (e.g., `20260
 
 #### Rebuild Index
 
-If you manually modify or reorganize commit/test files, you can regenerate the index:
-
-```bash
-# Rebuild with default order (oldest first - development log style)
-lumpy-log rebuild
-
-# Rebuild with changelog order (newest first)
-lumpy-log rebuild --changelog
-```
+devlog/
+├── journal/         # Journal entries (from `lumpy-log journal`)
+├── change_logs/     # Commit logs (from `lumpy-log changes`)
+├── test_results/    # Test result markdown files (from `lumpy-log test`)
+└── index.md         # Unified index
 
 ### As a Python Module
 
@@ -125,18 +154,15 @@ python -m lumpy_log -i /path/to/repo -o output
 
 ### Command-line Options
 
-#### Log Command (Git Commits)
+#### Changes Command (Git Commits)
 
 - `-i, --repo`: Path to the local Git repository (default: current directory)
 - `-o, --outputfolder`: Output folder for generated files (default: devlog)
 - `-f, --fromcommit`: Start from this commit
 - `-t, --tocommit`: End at this commit
-- `-a, --allbranches`: Include all branches
 - `-v, --verbose`: Verbose output
-- `-b, --branch`: Specific branch to process
 - `--force`: Force overwrite existing files
 - `-d, --dryrun`: Dry run - don't write files
-- `-n, --no-obsidian-index`: Don't generate index.md
 
 #### Test Command (Test Results)
 
@@ -164,19 +190,16 @@ lumpy-log rebuild -o /path/to/output
 - `-v, --verbose`: Verbose output
 - `--changelog`: Use changelog order (newest first) instead of default (oldest first)
 
+devlog/
 ### Output Structure
 
 Lumpy Log organizes output into subdirectories:
 
 ```
-devlog/
-├── index.md              # Unified index with commits and test results
-├── commits/              # Git commit markdown files
-│   ├── 20260118_1430_abc1234.md
-│   └── 20260118_1500_def5678.md
-└── tests/                # Test result markdown files
-    ├── 20260118_1430.md
-    └── 20260118_1500.md
+change_logs/         # Commit logs (from `lumpy-log changes`)
+journal/             # Dev journal entries (from `lumpy-log journal`)
+test_results/        # Test result markdown files (from `lumpy-log test`)
+index.md             # Unified index
 ```
 
 ### Ignoring Files (.lumpyignore)
