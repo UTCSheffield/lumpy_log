@@ -115,7 +115,7 @@ def main(args):
         current_branch = "unknown"
     
     # Report branch processing info if verbose
-    if verbose:
+    if True or verbose:
         print(f"Processing current branch: {current_branch}")
     
     for commit in Repository(repo_path, **kwargs).traverse_commits():
