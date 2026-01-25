@@ -10,13 +10,14 @@ Create a `.lumpyconfig.yml` file:
 # Output format(s)
 output_format:
   - obsidian
-  - docx
+  # - devlog
+  # - docx
 
 # Enable verbose output
 verbose: true
 
 # Limit to recent entries (optional)
-limit: 10
+# limit: 10
 ```
 
 ## Available Options
@@ -31,8 +32,6 @@ See [.lumpyconfig.yml.example](.lumpyconfig.yml.example) for a complete list of 
 | `outputfolder` | string | `devlog` | Output folder for generated files |
 | `verbose` | boolean | `false` | Enable verbose output |
 | `limit` | integer | none | Limit to N most recent entries |
-| `obsidian_index` | boolean | `true` | Generate Obsidian-style index.md |
-| `devlog` | boolean | `false` | Generate combined devlog.md |
 | `changelog` | boolean | `false` | Use changelog order (newest first) |
 | `hcti_api_user_id` | string | none | HCTI API User ID for code-as-images |
 | `hcti_api_key` | string | none | HCTI API Key for code-as-images |
@@ -65,31 +64,65 @@ For code-as-images in DOCX files, you can configure HCTI API credentials in thre
 
 3. **Not set** (falls back to text rendering)
 
-See [HCTI_SETUP.md](HCTI_SETUP.md) for more information.
+See [CODE_AS_IMAGE.md](CODE_AS_IMAGE.md) for more information.
+
+## Output Format
+
+You can choose the output format(s) for your dev log:
+
+- `obsidian`: Unified index.md for Obsidian (default)
+- `devlog`: Combined devlog.md with all entries
+- `docx`: Combined devlog.docx with all entries
+
+Example config:
+
+```yaml
+output_format:
+  - obsidian
+  # - devlog
+  # - docx
+```
+
+## Code Block Images in DOCX
+
+To enable code block image rendering in DOCX output (for syntax highlighting and advanced formatting):
+
+- Install Playwright:
+
+  ```bash
+  pip install lumpy-log[docx-playwright]
+  playwright install chromium
+  ```
+
+- Optionally configure HCTI API credentials for cloud rendering, or use Playwright for local rendering.
+- See [CODE_AS_IMAGE.md](CODE_AS_IMAGE.md) for full setup and usage instructions.
 
 ## Example Configurations
 
 ### Minimal (defaults)
+
 ```yaml
-# Uses all defaults
 output_format: obsidian
 ```
 
 ### Development Mode
-```yaml
-output_format: obsidian
-verbose: true
-limit: 5  # Only show 5 most recent entries
-```
 
-### Full Documentation
 ```yaml
-output_format:
   - obsidian
   - devlog
   - docx
 verbose: true
+limit: 10  # Only process the 10 most recent entries
+```
+
+### Full Docx with code as images
+
+```yaml
+output_format:
+  - docx
+verbose: true
 changelog: false  # oldest first
+render_code_as_images: true
 hcti_api_user_id: "your-id"
 hcti_api_key: "your-key"
 ```

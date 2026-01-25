@@ -3,6 +3,10 @@ import re
 from pathlib import Path
 from . import OUTPUT_JOURNAL_DIR, OUTPUT_CHANGELOGS_DIR, OUTPUT_TESTRESULTS_DIR
 from . import ITEM_TYPE_CHANGELOG, ITEM_TYPE_TEST, ITEM_TYPE_ENTRY
+from datetime import datetime
+from jinja2 import Environment, FileSystemLoader
+import mdformat
+from lumpy_log.config import get_hcti_credentials
 
 # Export for external use
 __all__ = [
@@ -16,11 +20,6 @@ __all__ = [
     "_rebuild_index",
 ]
 
-from datetime import datetime
-from jinja2 import Environment, FileSystemLoader
-import mdformat
-from lumpy_log.md_to_docx import markdown_file_to_docx
-from lumpy_log.config import get_hcti_credentials
 
 def _get_templates_dir():
     package_dir = os.path.dirname(os.path.abspath(__file__))
@@ -176,7 +175,7 @@ def _generate_docx(devlog_md_path: str, output_path: str = None, verbose: bool =
         devlog_md_path: Path to devlog.md file
         output_path: Output path for docx file (defaults to devlog.docx in same dir as md)
         verbose: Print progress messages
-        render_code_as_images: If True, render code blocks as images using HCTI API
+        render_code_as_images: If True, render code blocks as images using HCTI API or local Playwright
         repo_path: Repository path for loading HCTI credentials from config
     
     Returns:
@@ -187,14 +186,28 @@ def _generate_docx(devlog_md_path: str, output_path: str = None, verbose: bool =
         output_path = str(md_path.parent / "devlog.docx")
     
     try:
+        try:
+            from lumpy_log.md_to_docx import markdown_file_to_docx
+        except ImportError as ie:
+            msg = (
+                "Optional dependencies for docx playwright offline image generation are not installed.\n"
+                "  pip install lumpy-log[docx-playwright] # docx export with code-as-image\n"
+                "See README.md or pyproject.toml for details.\n"
+            )
+            if verbose:
+                print(msg)
+            else:
+                print("Docx playwright offline image generation requires optional dependencies. Run with --verbose for details.")
+            return {}
+
         # Get HCTI credentials from config or environment
         hcti_creds = get_hcti_credentials(repo_path)
         hcti_user_id = hcti_creds.get('user_id')
         hcti_api_key = hcti_creds.get('api_key')
-        
+
         if verbose and hcti_creds:
             print(f"Using HCTI credentials from {hcti_creds.get('source', 'unknown')}")
-        
+
         success = markdown_file_to_docx(
             str(devlog_md_path), 
             str(output_path), 

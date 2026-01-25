@@ -1,107 +1,139 @@
 # Lumpy Log - Prettified Git Logs
 
-Make git logs easier for use in scenarios when communicating the progress of a project to non-experts.
+Make git change logs super readable and combine then with test results and journal entries for the ultimate devlog. Great for use in scenarios when communicating the progress of a project to non-experts.
 
 ## Features
 
 - Generates readable markdown reports from Git commit history
 - Processes test output (TAP format) and creates test documentation
+- Generates blank journal entries or joins up with Obsidian Daily Notes, so you write about the progress & document the dev process
 - Multi-folder organization with unified index
+- Allows you to edit the files and regenerate the output (as an Obsidian index page, complete devlog.md, or a .docx file)
 
 📚 **See Also:**
+
 - [Obsidian Integration Guide](OBSIDIAN.md) - Detailed guide for using with Obsidian
-- [Development Guide](DEVELOPMENT.md) - For contributors and developers
-- [Publishing Guide](PUBLISHING.md) - How to publish to PyPI
-- [Quick Start](QUICKSTART.md) - Quick reference
 
 ## Installation
 
-### From PyPI (when published)
+### From PyPI
 
 ```bash
 pip install lumpy-log
 ```
 
-### For Development
-
-#### Add a Dev Log Entry
+For code-as-image rendering in DOCX output, install the optional Playwright dependency:
 
 ```bash
-# Add a new dev log entry
-lumpy-log log
+pip install lumpy-log[docx-playwright]
+playwright install chromium
+```
+
+See [CODE_AS_IMAGE.md](CODE_AS_IMAGE.md) for full setup and usage instructions.
+
+## Usage
+
+### Create / Update Your Development Log
+#### Typical usage : documenting a python project on linux
+
+```bash
+# Process the git commits in this branch
+lumpy-log
+
+# run pytest on your code and it to the devlog
+pytest --tap | lumpy-log test 
+
+# Add a new dev journal entry
+lumpy-log journal
+```
+
+### As a Python Module
+
+You can also run it as a module if you can't install it in the PATH:
+
+```bash
+python -m lumpy_log
+```
+
+### Configuration File
+
+Lumpy Log supports configuration via a `.lumpyconfig.yml` file in your repository root.
+
+#### Quick Start
+
+Create a `.lumpyconfig.yml` file:
+
+```yaml
+# Output format(s)
+output_format:
+  - obsidian # a single index.md that includes the file for each entry by filename
+  # - devlog # a single devlog.md that include the content of all the entries
+  # - docx # a devlog.docx file that includes all the content of all the entries (require optional install)
+
+# Enable verbose output
+verbose: true
+
+# Limit to recent entries (optional)
+# limit: 10
+```
+
+All the details are documented in [CONFIG](CONFIG.md)
 
 ### Command-line Options
 
-#### Log Command (Dev Log Entry)
+#### Common Options
 
-- `-o, --outputfolder`: Output folder for dev log entries (default: devlog/)
-- `-t, --title`: Title to place in the log entry
-- `-f, --filename`: Optional filename for the log entry (default: YYYYMMDD.md)
-- `--force`: Overwrite existing log entry file if present
+- `-o, --outputfolder`: Output folder for all dev log entries (default: devlog/)
 - `-v, --verbose`: Verbose output
 - `--limit`: Limit index/devlog to N most recent entries
 - `--output-format`: Output format(s) (overrides .lumpyconfig.yml)
+- `--changelog`: Use changelog order (newest first) instead of default (oldest first)
 
 #### Changes Command (Commit Logs)
 
+```bash
+lumpy-log
+lumpy-log changes
+```
+
 - `-i, --repo`: Path to the local Git repository (default: current directory)
-- `-o, --outputfolder`: Output folder for generated files (default: change_logs/)
 - `-f, --fromcommit`: Start from this commit
-- `-t, --tocommit`: End at this commit
-- `-v, --verbose`: Verbose output
-- `--force`: Force overwrite existing files
-- `-d, --dryrun`: Dry run - don't write files
-- `-n, --no-obsidian-index`: Don't generate Obsidian-style index.md file
-- `--devlog`: Generate a combined devlog.md with all commit and test content
-- `--limit`: Limit index/devlog to N most recent entries
 
-#### Test Command (Test Results)
+```bash
+pytest --tap | lumpy-log test 
+```
 
-- `-o, --outputfolder`: Output folder for test results (default: test_results/)
+Detailed instruction for many languages are found in [TESTING_COMMANDS](TESTING_COMMANDS.md)
+
 - `--input`: Input file with test output (if not specified, reads from stdin)
-- `-v, --verbose`: Verbose output
-- `--raw-test-output`: Include raw test output in the report
-- `--devlog`: Generate a combined devlog.md alongside index rebuild
-- `--limit`: Limit index/devlog to N most recent entries
+lumpy-log journal
+```
+
+- `-t, --title`: Title to place in the log entry
+- `-f, --filename`: Optional filename for the log entry (default: YYYYMMDD.md)
 
 #### Rebuild Command (Regenerate Index)
 
-Rebuilds the unified `index.md` from existing logs, change logs, and test results without re-processing git history or re-running tests.
+Rebuilds the unified `index.md` from existing logs, change logs, and test results without re-processing git history or re-running tests. Only has the common options.
 
 ```bash
-# Rebuild index with default order (oldest first)
-### As a CLI Command
 
-# Rebuild with changelog order (newest first)
+# Process the change logs for the current directory repository
+lumpy-log
 
-
-# Rebuild from custom output folder
-After installation, you can use the `lumpy-log` command:
-```
-
-- `-o, --outputfolder`: Output folder containing logs/, change_logs/, and test_results/ (default: logs/)
-- `-v, --verbose`: Verbose output
-- `--changelog`: Use changelog order (newest first) instead of default (oldest first)
-
-#### Generate Git Commit Logs
-
-```bash
-# Process current directory repository
-lumpy-log log
-
+# Process the change logs for the current directory repository
 # Process a specific repository
-lumpy-log log -i /path/to/repo
+lumpy-log changes -i /path/to/repo
 
 # Process with options
-lumpy-log log -i /path/to/repo -o devlog --verbose --force
-
-# Backwards compatible (defaults to log command)
-lumpy-log -i /path/to/repo
+lumpy-log changes -i /path/to/repo -o devlog --verbose --force
 ```
 
-#### Process Test Results
+### Process Test Results
 
 Lumpy Log can process test output in TAP (Test Anything Protocol) format and create markdown documentation alongside your commit logs.
+
+Detailed instruction for many languages are found in [TESTING_COMMANDS](TESTING_COMMANDS.md)
 
 **Install pytest-tap plugin:**
 
@@ -136,71 +168,17 @@ py -m pytest --tap | lumpy-log test --raw-output
 
 Test results are saved to `output/tests/` with timestamp filenames (e.g., `20260118_1430.md`), and the index is automatically updated to include both commits and test results.
 
-#### Rebuild Index
+## Output Structure
+
+Lumpy Log organizes output into subdirectories:
 
 devlog/
 ├── journal/         # Journal entries (from `lumpy-log journal`)
 ├── change_logs/     # Commit logs (from `lumpy-log changes`)
 ├── test_results/    # Test result markdown files (from `lumpy-log test`)
-└── index.md         # Unified index
-
-### As a Python Module
-
-You can also run it as a module:
-
-```bash
-python -m lumpy_log -i /path/to/repo -o output
-```
-
-### Command-line Options
-
-#### Changes Command (Git Commits)
-
-- `-i, --repo`: Path to the local Git repository (default: current directory)
-- `-o, --outputfolder`: Output folder for generated files (default: devlog)
-- `-f, --fromcommit`: Start from this commit
-- `-t, --tocommit`: End at this commit
-- `-v, --verbose`: Verbose output
-- `--force`: Force overwrite existing files
-- `-d, --dryrun`: Dry run - don't write files
-
-#### Test Command (Test Results)
-
-- `-o, --outputfolder`: Output folder for test results (default: devlog)
-- `--input`: Input file with test output (if not specified, reads from stdin)
-- `-v, --verbose`: Verbose output
-- `--raw-output`: Include raw test output in the report
-
-#### Rebuild Command (Regenerate Index)
-
-Rebuilds the unified `index.md` from existing commits and test results without re-processing git history or re-running tests.
-
-```bash
-# Rebuild index with default order (oldest first)
-lumpy-log rebuild
-
-# Rebuild with changelog order (newest first)
-lumpy-log rebuild --changelog
-
-# Rebuild from custom output folder
-lumpy-log rebuild -o /path/to/output
-```
-
-- `-o, --outputfolder`: Output folder containing commits/ and tests/ (default: devlog)
-- `-v, --verbose`: Verbose output
-- `--changelog`: Use changelog order (newest first) instead of default (oldest first)
-
-devlog/
-### Output Structure
-
-Lumpy Log organizes output into subdirectories:
-
-```
-change_logs/         # Commit logs (from `lumpy-log changes`)
-journal/             # Dev journal entries (from `lumpy-log journal`)
-test_results/        # Test result markdown files (from `lumpy-log test`)
-index.md             # Unified index
-```
+├── index.md         # Unified index in Obsidian format (optional / default)
+├── devlog.md        # All the entries rendered fully into .md (optional)
+└── devlog.docx      # All the entries rendered fully into .docx (optional)
 
 ### Ignoring Files (.lumpyignore)
 
@@ -208,7 +186,7 @@ Lumpy Log respects a repository-level `.lumpyignore` file using the same syntax 
 
 Example `.lumpyignore`:
 
-```
+```gitignore
 # Ignore Markdown (default)
 *.md
 
@@ -218,13 +196,10 @@ dist/
 *.tmp
 ```
 
-### Running Tests
+## Developing Lumpy Log
 
-To run the tests, use the following command:
-
-```bash
-pytest
-```
+- [Development Guide](DEVELOPMENT.md) - For contributors and developers
+- [Publishing Guide](PUBLISHING.md) - How to publish to PyPI
 
 
 # Example Output
@@ -233,16 +208,11 @@ pytest
 
 By "Mr Eggleton" on 2026-01-18
 
-
 ### "changelump.py" was Modified
-
-
 
 ```python
     # Abstracts out lineIsComment so we can  print the results
     def _lineIsComment(self, i):
-        line = self.lines[i]
-        if(self.verbose):
             print(self.lang.name, "self.lang.comment_structure",self.lang.comment_structure)
         comment_structure = self.lang.comment_structure
 
@@ -281,8 +251,6 @@ By "Mr Eggleton" on 2026-01-18
 
 ```
 
-
-
 ```python
     @property
     def code(self):    
@@ -297,8 +265,6 @@ By "Mr Eggleton" on 2026-01-18
         return code
 ```
 
-
-
 ```python
     def extendOverComments(self):
         if self.verbose:
@@ -309,8 +275,6 @@ By "Mr Eggleton" on 2026-01-18
             self.commentStart = j
 ```
 
-
-
 ```python
     def lineIsComment(self, i):
         blineIsComment = self._lineIsComment(i)
@@ -318,8 +282,6 @@ By "Mr Eggleton" on 2026-01-18
             print("lineIsComment", blineIsComment, self.lines[i])
         return blineIsComment
 ```
-
-
 
 ```python
     def inLump(self,i):
@@ -329,8 +291,6 @@ By "Mr Eggleton" on 2026-01-18
             print("inLump", "self.start", self.start,"i", i, "inLump",inLump)
         return inLump
 ```
-
-
 
 ```python
         """Return True if line i is inside an unmatched multiline comment block."""
@@ -373,11 +333,8 @@ By "Mr Eggleton" on 2026-01-18
 ```
 
 ## Test Results : 2026-01-20 13:30:12
-**Format:** tap
-
 
 - **Tests Run:** 113
 - **Passed:** 113 ✅
 - **Failed:** 0 
-- **Skipped:** 0 
-
+- **Skipped:** 0

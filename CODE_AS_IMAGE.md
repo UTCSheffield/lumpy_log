@@ -6,7 +6,19 @@ By default, code blocks in DOCX output are rendered as text with syntax highligh
 
 ## Setup Options
 
-### Option 1: Environment Variables (Highest Priority)
+### Option 1: .lumpyconfig.yml (Recommended)
+
+Add to your `.lumpyconfig.yml`:
+
+```yaml
+hcti_api_user_id: "your-user-id"
+hcti_api_key: "your-api-key"
+```
+
+**Priority:** Environment variables take precedence over config file credentials.
+
+
+### Option 2: Environment Variables (Highest Priority)
 
 ```bash
 export HCTI_API_USER_ID="your-user-id"
@@ -19,17 +31,6 @@ set HCTI_API_USER_ID=your-user-id
 set HCTI_API_KEY=your-api-key
 ```
 
-### Option 2: .lumpyconfig.yml (Recommended)
-
-Add to your `.lumpyconfig.yml`:
-
-```yaml
-hcti_api_user_id: "your-user-id"
-hcti_api_key: "your-api-key"
-```
-
-**Priority:** Environment variables take precedence over config file credentials.
-
 ### Option 3: Local Rendering (Free, No API Keys)
 
 Use the built-in Playwright fallback to render code blocks locally. This is useful if you don't want to use the HCTI API or you run out of quota.
@@ -37,11 +38,11 @@ Use the built-in Playwright fallback to render code blocks locally. This is usef
 1) Install Playwright and a browser (Chromium by default). Easiest is to use the optional extras so it's tracked in your environment:
 
 ```bash
-pip install "lumpy-log[docx-images]"
+pip install "lumpy-log[docx-playwright]"
 playwright install chromium
 ```
 
-(Or if developing locally from source: `pip install -e .[docx-images]`)
+(Or if developing locally from source: `pip install -e .[docx-playwright]`)
 
 2) (Optional) To use Firefox or WebKit instead of Chromium:
 

@@ -25,7 +25,7 @@ outputfolder: devlog
 # Render code blocks as images in DOCX output (default: false)
 # When enabled:
 #  - If HCTI credentials are configured, uses htmlcsstoimage.com API
-#  - Otherwise, falls back to local Playwright rendering (requires: pip install "lumpy-log[docx-images]" && playwright install chromium)
+#  - Otherwise, falls back to local Playwright rendering (requires: pip install "lumpy-log[docx-playwright]" && playwright install chromium)
 #  - If both unavailable, uses text rendering with syntax highlighting
 # render_code_as_images: true
 

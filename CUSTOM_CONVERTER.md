@@ -60,6 +60,23 @@ Code blocks get special formatting:
 
 This makes code blocks stand out clearly in the generated DOCX document.
 
+## Code Block Image Rendering
+
+For advanced code block rendering, you can now generate images of code blocks in DOCX output if you install the optional Playwright dependency:
+
+```bash
+pip install lumpy-log[docx-playwright]
+playwright install chromium
+```
+
+See [CODE_AS_IMAGE.md](CODE_AS_IMAGE.md) for setup instructions, API credentials, and details on local rendering with Playwright.
+
+- Supports both HCTI API and local Playwright rendering
+- Caches images for efficiency and free tier usage
+- Falls back to text rendering if not configured
+
+**Note:** This feature is only available if you install the optional Playwright dependency. Docx export is now included by default.
+
 ## Usage Examples
 
 ### Basic Usage
